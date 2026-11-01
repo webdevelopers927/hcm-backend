@@ -19,7 +19,7 @@ Template columns (`*` = required):
 ```
 first_name*, last_name*, email*, phone, cnic, gender, birth_date, pseudo_name, machine_uid,
 department*, designation*, division, campaign, shift, location, reports_to,
-work_mode, status, join_date*, gross_salary*, bank_name, account_title, iban
+work_mode, status, join_date*
 ```
 
 ### 2. `POST /employees/import`: validate or import
@@ -49,7 +49,6 @@ Row errors: **422**. Nothing was imported, all-or-nothing:
   "errors": {
     "rows.2.email": ["The email has already been taken."],
     "rows.3.department": ["Department \"Enginering\" does not exist."],
-    "rows.3.gross_salary": ["The gross salary field must be greater than 0."],
     "rows.3.join_date": ["The join date field must match the format Y-m-d."],
     "rows.4.designation": ["Designation \"Software Engineer\" does not exist in department \"Finance\"."]
   }
@@ -87,7 +86,7 @@ type ImportRowError = { line: number; column: string; messages: string[] };
      file** with `dry_run=0`. Also offer "Choose a different file".
    - **422 with `rows.*`** → show the summary `message`, then a table grouped by line:
      `Line | Column | Problem` (sorted by line; one row per message). Use human column labels
-     (`gross_salary` → "Gross salary"). Make clear that **nothing was imported** and the user should fix the
+     (`join_date` → "Join date"). Make clear that **nothing was imported** and the user should fix the
      file and upload again. Offer "Choose a different file".
    - **422 with `file`** → show that message inline under the file input.
 3. **Imported (201)**
@@ -106,14 +105,14 @@ Keep it short, as bullet points:
 - Department, designation, shift, location, division and campaign use **names** (e.g. "Engineering",
   "Morning"), not ids. The designation must belong to the department.
 - `reports_to` = an existing employee code (`EMP-0001`) or email, or the email of another row in the same file.
-- Dates are `YYYY-MM-DD`. Salary may contain commas (`140,000`).
+- Dates are `YYYY-MM-DD`.
 - Status: active, probation, on leave, notice period, inactive. Work mode: onsite, hybrid, remote.
 - If any row has an error, nothing is imported. Every imported employee receives an invitation email.
 
 ## Quality bar
 - Strict TypeScript, no `any`. Put the API calls in the existing employees API module
   (`downloadImportTemplate()`, `importEmployees(file, { dryRun })`).
-- Never log file contents (they contain CNIC/IBAN/salary) to the console or to analytics.
+- Never log file contents (they contain CNIC and other personal data) to the console or to analytics.
 - Run the project's lint, typecheck and tests, and report the real output. Finish with a short note on what
   you built and any mismatch with these responses.
 - Local login for testing: `admin@hcm.test` (the password is in the backend `.env` as `SEED_ADMIN_PASSWORD`).

@@ -4,8 +4,10 @@ JSON API for the HCM product (Laravel 12, MySQL/MariaDB). It is consumed by a se
 through Bearer tokens (Laravel Sanctum). There is one deployment and one database per client company,
 so there's no multi-tenancy.
 
-Current scope: auth (login/logout/me) and the **Employees → All employees** module.
-API reference with real request/response examples: [docs/api-v1-employees.md](docs/api-v1-employees.md).
+Current scope: auth (login/logout/me), the **Employees → All employees** module, the full employee form
+with drafts, and reference data (countries/states/cities, divisions, degree programs).
+API reference with real request/response examples: [docs/api-v1-employees.md](docs/api-v1-employees.md);
+the employee form, drafts, uploads and reference data: [docs/api-v1-employee-form.md](docs/api-v1-employee-form.md).
 
 ## Requirements
 
@@ -39,9 +41,11 @@ CREATE DATABASE hcm_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 ```bash
-php artisan migrate --seed   # lookups, admin user, 64 demo employees
+php artisan migrate --seed   # world geo data (~8 s), lookups, admin user, 64 demo employees
+php artisan storage:link     # serves profile pictures from storage/app/public
 php artisan serve            # http://localhost:8000
 php artisan queue:work       # sends queued invite emails (QUEUE_CONNECTION=database)
+php artisan schedule:work    # dev: runs uploads:prune hourly (use cron + schedule:run in production)
 ```
 
 Get a token:
@@ -79,12 +83,23 @@ php artisan test                                   # Pest; uses the hcm_testing 
 
 Key decisions:
 
-- **PII:** `cnic` and `iban` use encrypted casts. CNIC uniqueness is checked through `cnic_hash` (an HMAC
-  blind index keyed with `APP_KEY`). PII is returned only by `GET /employees/{id}/sensitive`, and each call
-  is written to the activity log. Rotating `APP_KEY` requires re-encrypting these columns and recomputing
-  `cnic_hash`.
-- **Salary** is effective-dated (`employee_compensations`). Rows are only ever inserted; the current salary
-  is the latest row with `effective_from <= today`.
+- **PII:** `cnic`, `passport_no`, `driving_license_no` and spouse `cnic` use encrypted casts. CNIC
+  uniqueness is checked through `cnic_hash` (an HMAC blind index keyed with `APP_KEY`). The full values are
+  returned only by `GET /employees/{id}/sensitive` (other responses mask them), and each call is written to
+  the activity log. Rotating `APP_KEY` requires re-encrypting these columns and recomputing `cnic_hash`.
+- **Drafts** are employee rows with `is_draft = true`: no code, no login, hidden from the list, export and
+  manager pickers. Field rules (`EmployeeRules`) only check format, so a draft can be saved at any point;
+  `EmployeeCompleteness` is the single definition of "complete" and runs on direct create, draft submit,
+  every edit of a real employee, and import rows.
+- **Files** are uploaded first (`POST /uploads`) and attached by id in the JSON save; `FileBatch` keeps
+  disk and DB in step (copies removed on rollback, replaced files deleted after commit). Documents and
+  experience letters are private (`local` disk, audited download endpoints); avatars are on `public`.
+- **Phone numbers** are validated per country with libphonenumber and stored in E.164.
+- **Geo data** in `database/data/geo` is trimmed from the
+  [countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database)
+  (© Darshan Gada, ODbL-1.0). Keep this attribution if you redistribute the data.
+- **Salary and bank details** are not stored on employees (interns may have none). They belong to the
+  payroll module.
 - **Soft deletes** for employees. Deleting also revokes the linked user's tokens.
 - **Audit trail:** `spatie/laravel-activitylog`, with manual entries that store ids and IP only, never
   model attributes.
@@ -96,4 +111,5 @@ Key decisions:
 - Roles and permissions (spatie/laravel-permission) and manager tree scoping. Every authenticated user
   can currently do everything except delete their own record.
 - Email OTP / 2FA. The `users` columns already exist (`two_factor_*`).
-- Set-password endpoint for invite links, avatar upload, and the attendance and leave modules.
+- Set-password endpoint for invite links, and the attendance, leave and payroll modules.
+- CRUD for employment statuses (hardcoded enum for now) and probation durations (seeded).

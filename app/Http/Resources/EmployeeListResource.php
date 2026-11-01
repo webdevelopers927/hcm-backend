@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * EmployeeListItem. Must never contain CNIC, IBAN, salary or phone.
+ * EmployeeListItem. Must never contain CNIC or phone.
  *
  * @mixin Employee
  */

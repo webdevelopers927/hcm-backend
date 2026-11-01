@@ -98,12 +98,6 @@ interface EmployeeProfile extends EmployeeListItem {
 interface EmployeeSensitive {
   employee_id: number;
   cnic: string | null;          // "35202-1234567-1"
-  bank_name: string | null;
-  account_title: string | null;
-  iban: string | null;
-  gross_salary: string | null;  // decimal STRING, e.g. "185000.00"; format it, don't do float math
-  currency: string | null;      // "PKR"
-  salary_effective_from: string | null;
 }
 
 interface EmployeeListResponse {
@@ -137,7 +131,7 @@ UI requirements:
 - Row actions, each shown or enabled only when the matching `row.can.*` is true: View, Edit, Delete,
   Reset 2FA, Unbind device.
 - Checkbox multi-select across the current page for bulk delete and export of the selected rows.
-- The list never contains CNIC, IBAN, salary or phone. Don't try to show them there.
+- The list never contains CNIC or phone. Don't try to show them there.
 
 ### `GET /employees/filters`
 `{ data: { departments: IdName[], designations: (IdName & { department_id: number|null })[], divisions: IdName[],
@@ -151,31 +145,28 @@ its profile), contact info, employment, and placeholders for attendance and leav
 
 ### `GET /employees/{id}/sensitive` (reveal PII)
 `{ data: EmployeeSensitive }`. Every call is **audit-logged** on the server.
-- Show CNIC, IBAN and salary **masked** by default (e.g. `35202-•••••••-1`, `PK•• •••• •••• 7890`, `PKR ••••••`).
+- Show the CNIC **masked** by default (e.g. `35202-•••••••-1`).
 - Call this endpoint **only when the user clicks "Reveal"**: never on page load, never prefetched, never
   in a list.
 - Don't cache it (no persistent query cache, `cache: 'no-store'`). Re-mask on navigation away or after
   ~60 seconds.
 
-### `POST /employees` (create wizard, 4 steps)
-Suggested steps: 1) Personal 2) Job 3) Compensation & bank 4) Review. Validate each step client-side, but
+### `POST /employees` (create wizard, 3 steps)
+Suggested steps: 1) Personal 2) Job 3) Review. Validate each step client-side, but
 the server's 422 is the source of truth: map `errors` back to the right step and field, then jump to the
 first step that has an error.
-- Required: `first_name`, `last_name`, `email`, `designation_id`, `department_id`, `join_date` (`YYYY-MM-DD`),
-  `gross_salary` (number > 0).
+- Required: `first_name`, `last_name`, `email`, `designation_id`, `department_id`, `join_date` (`YYYY-MM-DD`).
 - Optional: `pseudo_name`, `phone`, `cnic` (format `^\d{5}-\d{7}-\d$`, so use an input mask), `gender`
   (`male|female|other`), `birth_date`, `machine_uid`, `division_id`, `campaign_id`, `reports_to_id`
   (pick from the employee list via async search), `work_mode`, `status` (defaults to `active`),
-  `shift_id`, `location_id`, `bank_name`, `account_title`, `iban`.
-  `bank_name` is required when `iban` is sent. The IBAN may contain spaces; the server normalises it.
+  `shift_id`, `location_id`.
+- **No salary or bank fields.** They belong to the payroll module (not built yet). Don't add a
+  compensation step.
 - Response **201** `{ data: EmployeeProfile }` → go to the new profile and toast "Invite sent". The server
   creates a login account and emails an invite link to `${FRONTEND_URL}/set-password?token=...&email=...`.
 
 ### `PATCH /employees/{id}` (edit)
 The same fields, all optional. Send **only changed fields**.
-- Changing `gross_salary` **adds** a new salary record. Also send `salary_effective_from` (`YYYY-MM-DD`,
-  defaults to today, may be in the future). Label it "Effective from" in the UI and explain that past
-  salaries are kept.
 - Changing the email also changes the employee's login email. Show a confirm.
 - Returns `{ data: EmployeeProfile }`.
 
@@ -224,13 +215,14 @@ employee code or email.
 - The `/set-password` page is linked from invite emails, but **the API endpoint to complete it doesn't exist
   yet**. Build the page UI only if it's cheap, and mark it TODO.
 - Avatar upload (there's no upload endpoint yet; `avatar_url` is read-only).
+- Salary and bank details (they arrive with the payroll module).
 
 ## Quality bar
 - Strict TypeScript, no `any` on API data. Put API calls in one module (e.g. `lib/api/employees.ts`).
 - Loading skeletons, empty states (including "no results for these filters" with a clear-filters button)
   and error states on every screen.
 - Accessible: labelled inputs, keyboard-usable dialogs and menus, status not shown by colour alone.
-- Never log CNIC, IBAN, salary or tokens to the console or to analytics.
+- Never log CNIC or tokens to the console or to analytics.
 - Run the project's lint, typecheck and tests before finishing, and report their real output.
 - Finish with a short note: what you wired up, what is mocked or TODO, and any mismatch you found
   between this contract and the real API responses.

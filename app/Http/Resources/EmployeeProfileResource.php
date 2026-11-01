@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 
 /**
  * Profile = EmployeeListItem + contact, reporting line and employment details.
- * No CNIC/IBAN/salary: those come only from GET /employees/{id}/sensitive.
+ * No CNIC: it comes only from GET /employees/{id}/sensitive.
  *
  * @mixin Employee
  */

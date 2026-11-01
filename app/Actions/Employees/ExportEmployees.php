@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportEmployees
 {
-    /** Deliberately no PII: no CNIC, IBAN, salary, phone or birth date. */
+    /** Deliberately no PII: no CNIC, phone or birth date. */
     public const HEADINGS = ['Code', 'Name', 'Email', 'Designation', 'Department', 'Status', 'Work mode', 'Shift', 'Location', 'Join date'];
 
     public function __construct(private readonly BuildEmployeeQuery $builder) {}

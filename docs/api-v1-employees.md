@@ -7,7 +7,10 @@ on every endpoint except login, `Authorization: Bearer <token>`.
 
 > All examples below were **captured from a real run** against the seeded development database on
 > 2026-11-01 (`php artisan migrate:fresh --seed` followed by curl). Tokens are redacted, and long arrays are
-> shortened where marked. The CNIC, IBAN and salary values are fake factory data.
+> shortened where marked. The CNIC values are fake factory data.
+>
+> Salary and bank details are **not part of the Employees module**. They will be added with the payroll
+> module (an employee can have no salary, e.g. an intern).
 
 ## Conventions
 
@@ -16,7 +19,6 @@ on every endpoint except login, `Authorization: Bearer <token>`.
 | JSON keys | `snake_case` |
 | Dates | `YYYY-MM-DD` (e.g. `join_date`) |
 | Timestamps | ISO 8601 (e.g. `bound_at: "2026-08-14T20:35:47+00:00"`) |
-| Money | decimal **string** (`"276000.00"`) plus `currency` |
 | Array query params | `status[]=active&status[]=probation` (comma-separated `status=active,probation` also works) |
 | Single resources | wrapped in `data` |
 
@@ -173,7 +175,7 @@ Using the same token afterwards:
 | `per_page` | int ≥1 | default 12; values above 100 are **clamped** to 100 |
 
 `status_counts` applies **every filter except `status`**, so the status tabs show correct numbers.
-The list never contains CNIC, IBAN, salary, phone or birth date. `can` is computed per row from the
+The list never contains CNIC, phone or birth date. `can` is computed per row from the
 current user's policy.
 
 Unfiltered, `per_page=2`:
@@ -644,8 +646,7 @@ Unknown or deleted id:
 ```
 
 ### `GET /employees/{id}/sensitive`: PII (reveal)
-Returns CNIC, bank details and the **current** salary (the latest row with `effective_from <= today`).
-Every call writes an activity-log entry (`log_name=employees`, `event=sensitive_viewed`, causer = the viewer,
+Returns the CNIC. Every call writes an activity-log entry (`log_name=employees`, `event=sensitive_viewed`, causer = the viewer,
 subject = the employee, `properties.ip`). The response carries `Cache-Control: no-store, private`.
 ```json
 # GET /api/v1/employees/1/sensitive
@@ -653,32 +654,24 @@ subject = the employee, `properties.ip`). The response carries `Cache-Control: n
 {
     "data": {
         "employee_id": 1,
-        "cnic": "45244-4627427-9",
-        "bank_name": "Allied Bank",
-        "account_title": "Ahmed Nawaz",
-        "iban": "PK25YBCT6482116182760619",
-        "gross_salary": "276000.00",
-        "currency": "PKR",
-        "salary_effective_from": "2020-12-16"
+        "cnic": "45244-4627427-9"
     }
 }
 ```
 
 ### `POST /employees`: create
 Required: `first_name`, `last_name`, `email` (unique across employees, including deleted ones, and users),
-`designation_id`, `department_id`, `join_date`, `gross_salary` (> 0).
+`designation_id`, `department_id`, `join_date`.
 Optional: `pseudo_name`, `phone`, `cnic` (`^\d{5}-\d{7}-\d$`, unique via a blind index), `gender`
 (`male|female|other`), `birth_date`, `machine_uid`, `division_id`, `campaign_id`, `reports_to_id`, `work_mode`,
-`status` (default `active`), `shift_id`, `location_id`, `bank_name` (required with `iban`), `account_title`
-(defaults to the full name), `iban` (spaces are stripped and it is upper-cased).
+`status` (default `active`), `shift_id`, `location_id`. Unknown fields (e.g. `gross_salary`) are ignored.
 
-In one transaction it creates the employee (code `EMP-NNNN` derived from the id), the first compensation
-row (`effective_from = join_date`), the bank account (if given) and a linked user. After commit it queues
+In one transaction it creates the employee (code `EMP-NNNN` derived from the id) and a linked user. After commit it queues
 an invite email (the `log` mailer in dev) with a 72-hour set-password link to
 `${FRONTEND_URL}/set-password`.
 ```json
 # POST /api/v1/employees
-# BODY {"first_name":"Fatima","last_name":"Noor","email":"fatima.noor@company.pk","phone":"+92 300 1234567","cnic":"35202-1234567-1","gender":"female","designation_id":18,"department_id":6,"reports_to_id":1,"work_mode":"hybrid","shift_id":1,"location_id":1,"join_date":"2026-11-03","gross_salary":185000,"bank_name":"Meezan Bank","iban":"PK36 MEZN 0000 0012 3456 7890"}
+# BODY {"first_name":"Fatima","last_name":"Noor","email":"fatima.noor@company.pk","phone":"+92 300 1234567","cnic":"35202-1234567-1","gender":"female","designation_id":18,"department_id":6,"reports_to_id":1,"work_mode":"hybrid","shift_id":1,"location_id":1,"join_date":"2026-11-03"}
 # STATUS 201
 {
     "data": {
@@ -745,10 +738,10 @@ an invite email (the `log` mailer in dev) with a 72-hour set-password link to
 Validation: `422`
 ```json
 # POST /api/v1/employees
-# BODY {"first_name":"","email":"fatima.noor@company.pk","cnic":"123","gross_salary":0}
+# BODY {"first_name":"","email":"fatima.noor@company.pk","cnic":"123"}
 # STATUS 422
 {
-    "message": "The first name field is required. (and 7 more errors)",
+    "message": "The first name field is required. (and 6 more errors)",
     "errors": {
         "first_name": [
             "The first name field is required."
@@ -770,21 +763,16 @@ Validation: `422`
         ],
         "join_date": [
             "The join date field is required."
-        ],
-        "gross_salary": [
-            "The gross salary field must be greater than 0."
         ]
     }
 }
 ```
 
 ### `PATCH /employees/{id}`: partial update
-Accepts the same fields, all optional, plus `salary_effective_from` (defaults to today). Sending `gross_salary`
-**inserts a new compensation row** and never edits old ones, so a future-dated raise takes effect on its date.
-Changing name or email also updates the linked login user.
+Accepts the same fields, all optional. Changing name or email also updates the linked login user.
 ```json
 # PATCH /api/v1/employees/65
-# BODY {"work_mode":"remote","gross_salary":200000,"salary_effective_from":"2027-01-01"}
+# BODY {"work_mode":"remote"}
 # STATUS 200
 {
     "data": {
@@ -999,8 +987,8 @@ Content-Type: text/csv; charset=UTF-8
 Content-Disposition: attachment; filename=employee-import-template.csv
 ```
 ```csv
-first_name*,last_name*,email*,phone,cnic,gender,birth_date,pseudo_name,machine_uid,department*,designation*,division,campaign,shift,location,reports_to,work_mode,status,join_date*,gross_salary*,bank_name,account_title,iban
-Ayesha,Khan,ayesha.khan@company.pk,"+92 300 1234567",35202-1234567-1,female,1995-04-18,Ayesha,,"Customer Success","Customer Success Manager",,,Morning,Lahore,,onsite,probation,2026-11-01,150000,"Meezan Bank","Ayesha Khan",PK36MEZN0000001234567890
+first_name*,last_name*,email*,phone,cnic,gender,birth_date,pseudo_name,machine_uid,department*,designation*,division,campaign,shift,location,reports_to,work_mode,status,join_date*
+Ayesha,Khan,ayesha.khan@company.pk,"+92 300 1234567",35202-1234567-1,female,1995-04-18,Ayesha,,"Customer Success","Customer Success Manager",,,Morning,Lahore,,onsite,probation,2026-11-01
 ```
 
 ### `POST /employees/import`: bulk create from CSV/XLSX
@@ -1014,9 +1002,8 @@ Rules:
   `division`, `campaign`, `shift`, `location`.
 - `reports_to`: an existing employee's **code or email**, or the **email of another row in the same file**
   (resolved after insert). Self-references and cycles are rejected.
-- Enum values accept labels: `On leave` becomes `on_leave`, `Hybrid` becomes `hybrid`. `gross_salary` may contain
-  thousands separators (`"140,000"`). Dates are `YYYY-MM-DD`; Excel date cells, including unformatted serial
-  numbers, are converted.
+- Enum values accept labels: `On leave` becomes `on_leave`, `Hybrid` becomes `hybrid`. Dates are `YYYY-MM-DD`;
+  Excel date cells, including unformatted serial numbers, are converted.
 - Each row is validated with the **same rules as `POST /employees`**, plus duplicate email, CNIC and machine_uid
   checks within the file.
 - **All-or-nothing:** any invalid row means nothing is written (`422`, errors keyed `rows.<line>.<column>`,
@@ -1025,9 +1012,9 @@ Rules:
 
 The example file has 2 rows; Maham reports to Bilal, who is a new row in the same file:
 ```csv
-first_name*,last_name*,email*,department*,designation*,join_date*,gross_salary*,shift,location,work_mode,status,reports_to
-Bilal,Ashraf,bilal.ashraf@company.pk,Engineering,Software Engineer,2026-11-10,"140,000",Morning,Lahore,hybrid,probation,EMP-0001
-Maham,Tariq,maham.tariq@company.pk,Engineering,QA Engineer,2026-11-10,110000,Morning,Lahore,onsite,probation,bilal.ashraf@company.pk
+first_name*,last_name*,email*,department*,designation*,join_date*,shift,location,work_mode,status,reports_to
+Bilal,Ashraf,bilal.ashraf@company.pk,Engineering,Software Engineer,2026-11-10,Morning,Lahore,hybrid,probation,EMP-0001
+Maham,Tariq,maham.tariq@company.pk,Engineering,QA Engineer,2026-11-10,Morning,Lahore,onsite,probation,bilal.ashraf@company.pk
 ```
 
 Dry run (`dry_run=1`): `200`
@@ -1054,10 +1041,10 @@ Commit (`dry_run=0`): `201`
 
 A file with errors: `422`, nothing imported
 ```csv
-first_name*,last_name*,email*,department*,designation*,join_date*,gross_salary*
-Bilal,Ashraf,ahmed.nawaz@company.pk,Engineering,Software Engineer,2026-11-10,140000
-Maham,Tariq,maham.t@company.pk,Enginering,QA Engineer,10/11/2026,0
-Zara,Iqbal,zara.iqbal@company.pk,Finance,Software Engineer,2026-11-10,90000
+first_name*,last_name*,email*,department*,designation*,join_date*
+Bilal,Ashraf,ahmed.nawaz@company.pk,Engineering,Software Engineer,2026-11-10
+Maham,Tariq,maham.t@company.pk,Enginering,QA Engineer,10/11/2026
+Zara,Iqbal,zara.iqbal@company.pk,Finance,Software Engineer,2026-11-10
 ```
 ```json
 {
@@ -1068,9 +1055,6 @@ Zara,Iqbal,zara.iqbal@company.pk,Finance,Software Engineer,2026-11-10,90000
         ],
         "rows.3.department": [
             "Department \"Enginering\" does not exist."
-        ],
-        "rows.3.gross_salary": [
-            "The gross salary field must be greater than 0."
         ],
         "rows.3.join_date": [
             "The join date field must match the format Y-m-d."
