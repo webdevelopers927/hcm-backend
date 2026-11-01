@@ -3,7 +3,12 @@
 namespace App\Http\Requests\Employees;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
+/**
+ * POST /employees (complete hire) and POST /employees/drafts. Same field rules; the controller decides
+ * whether completeness is enforced.
+ */
 class StoreEmployeeRequest extends FormRequest
 {
     use EmployeeRules;
@@ -24,5 +29,13 @@ class StoreEmployeeRequest extends FormRequest
     public function rules(): array
     {
         return $this->employeeRules(null);
+    }
+
+    /**
+     * @return array<int, \Closure(Validator): void>
+     */
+    public function after(): array
+    {
+        return [fn (Validator $validator) => $this->employeeAfterValidation($validator, null)];
     }
 }

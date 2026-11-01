@@ -9,3 +9,6 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('sanctum:prune-expired --hours=24')->daily();
+
+// Uploads that were never attached to an employee.
+Schedule::command('uploads:prune')->hourly();

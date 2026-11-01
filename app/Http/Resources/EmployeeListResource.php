@@ -39,7 +39,7 @@ class EmployeeListResource extends JsonResource
             'avatar_url' => $employee->avatar_url,
             'designation' => self::idName($employee->designation),
             'department' => self::idName($employee->department),
-            'status' => $employee->status->value,
+            'status' => $employee->status?->value,
             'work_mode' => $employee->work_mode->value,
             'shift' => $employee->shift ? [
                 'id' => $employee->shift->id,
@@ -49,7 +49,7 @@ class EmployeeListResource extends JsonResource
             ] : null,
             'campaign' => self::idName($employee->campaign),
             'location' => self::idName($employee->location),
-            'join_date' => $employee->join_date->toDateString(),
+            'join_date' => $employee->join_date?->toDateString(),
             'two_factor_enabled' => (bool) $employee->user?->two_factor_enabled,
             'device_bound' => $this->deviceBound($employee),
             'can' => [

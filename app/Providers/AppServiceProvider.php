@@ -28,12 +28,17 @@ class AppServiceProvider extends ServiceProvider
         // Surface lazy loading (N+1), missing selected columns and silently dropped attributes outside production.
         Model::shouldBeStrict(! $this->app->isProduction());
 
-        Route::pattern('employee', '[0-9]+');
+        Route::patterns(array_fill_keys(
+            ['employee', 'document', 'workExperience', 'country', 'state', 'division', 'degree_program'],
+            '[0-9]+',
+        ));
 
         RateLimiter::for('login', function (Request $request) {
             $email = Str::lower((string) $request->input('email'));
 
             return Limit::perMinute(5)->by($email.'|'.$request->ip());
         });
+
+        RateLimiter::for('uploads', fn (Request $request) => Limit::perMinute(60)->by((string) $request->user()?->getAuthIdentifier()));
     }
 }

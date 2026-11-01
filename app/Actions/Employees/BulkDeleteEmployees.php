@@ -20,7 +20,7 @@ class BulkDeleteEmployees
     public function handle(User $actor, array $ids, ?string $ip): array
     {
         $ids = array_values(array_unique($ids));
-        $employees = Employee::query()->with('user:id')->whereIn('id', $ids)->get()->keyBy('id');
+        $employees = Employee::query()->finalized()->with('user:id')->whereIn('id', $ids)->get()->keyBy('id');
 
         $deleted = [];
         $failed = [];

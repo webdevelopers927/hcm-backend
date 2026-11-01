@@ -4,26 +4,38 @@ namespace App\Actions\Employees;
 
 use App\Models\Employee;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Support\FileBatch;
 
 class DeleteEmployee
 {
+    public function __construct(private readonly SaveEmployee $save) {}
+
     /**
-     * Soft delete, revoke the linked user's API tokens, and write an audit entry.
+     * A real employee is soft deleted and the linked user's API tokens are revoked. A draft is discarded
+     * for good, files included. Either way an audit entry is written.
      * Authorization (incl. "not yourself") is the caller's job via EmployeePolicy::delete.
      */
     public function handle(User $actor, Employee $employee, ?string $ip): void
     {
-        DB::transaction(function () use ($actor, $employee, $ip) {
-            $employee->delete();
-            $employee->user?->tokens()->delete();
+        FileBatch::transaction(function (FileBatch $files) use ($actor, $employee, $ip) {
+            $draft = $employee->is_draft;
 
             activity('employees')
                 ->causedBy($actor)
                 ->performedOn($employee)
-                ->event('deleted')
+                ->event($draft ? 'draft_deleted' : 'deleted')
                 ->withProperties(['ip' => $ip])
-                ->log('Employee deleted');
+                ->log($draft ? 'Employee draft deleted' : 'Employee deleted');
+
+            if ($draft) {
+                $this->save->deleteAllFiles($employee, $files);
+                $employee->forceDelete();
+
+                return;
+            }
+
+            $employee->delete();
+            $employee->user?->tokens()->delete();
         });
     }
 }

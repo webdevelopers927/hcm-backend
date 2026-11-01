@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\DutyType;
 use App\Enums\EmployeeStatus;
 use App\Enums\Gender;
 use App\Enums\WorkMode;
@@ -73,7 +74,26 @@ class EmployeeFactory extends Factory
                 EmployeeStatus::Inactive,
             ]),
             'join_date' => fake()->dateTimeBetween('-6 years', '-1 week')->format('Y-m-d'),
+            'duty_type' => fake()->randomElement([...array_fill(0, 8, DutyType::FullTime), DutyType::Contract, DutyType::PartTime]),
         ];
+    }
+
+    /** Can have people reporting to them. */
+    public function teamLead(): static
+    {
+        return $this->state(['has_team_authority' => true]);
+    }
+
+    /** An unfinished draft: no code, no login account, most fields still empty. */
+    public function draft(): static
+    {
+        return $this->state(fn () => [
+            'is_draft' => true,
+            'status' => null,
+            'duty_type' => null,
+            'cnic' => null,
+            'join_date' => null,
+        ]);
     }
 
     private static function uniqueEmail(string $first, string $last): string

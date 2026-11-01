@@ -29,6 +29,8 @@ beforeEach(function () {
         'shift_id' => Shift::first()->id,
         'location_id' => Location::first()->id,
         'join_date' => '2024-03-12',
+        'status' => 'active',
+        'duty_type' => 'full_time',
     ];
 });
 
@@ -47,6 +49,9 @@ it('creates the employee and user in one go and returns 201 profile', function (
     expect($employee->code)->toBe(sprintf('EMP-%04d', $employee->id))
         ->and($response->json('data.code'))->toBe($employee->code)
         ->and($employee->cnic)->toBe('35202-1234567-1')
+        ->and($employee->phone)->toBe('+923001234567')
+        ->and($employee->is_draft)->toBeFalse()
+        ->and($employee->created_by_id)->not->toBeNull()
         ->and($employee->user)->not->toBeNull()
         ->and($employee->user->email)->toBe('fatima.javed@company.pk');
 
@@ -75,7 +80,7 @@ it('rolls everything back when a step fails halfway', function () {
 it('requires the mandatory fields', function () {
     $this->postJson('/api/v1/employees', [])
         ->assertStatus(422)
-        ->assertJsonValidationErrors(['first_name', 'last_name', 'email', 'designation_id', 'department_id', 'join_date'])
+        ->assertJsonValidationErrors(['first_name', 'last_name', 'email', 'cnic', 'designation_id', 'department_id', 'status', 'duty_type', 'join_date'])
         ->assertJsonMissingValidationErrors(['gross_salary']);
 });
 

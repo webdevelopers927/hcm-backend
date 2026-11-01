@@ -8,6 +8,11 @@ enum Gender: string
     case Female = 'female';
     case Other = 'other';
 
+    public function label(): string
+    {
+        return ucfirst($this->value);
+    }
+
     /**
      * @return list<string>
      */

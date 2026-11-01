@@ -3,9 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\Campaign;
+use App\Models\DegreeProgram;
 use App\Models\Department;
 use App\Models\Division;
 use App\Models\Location;
+use App\Models\ProbationDuration;
 use App\Models\Shift;
 use Illuminate\Database\Seeder;
 
@@ -21,6 +23,16 @@ class LookupSeeder extends Seeder
         'People' => ['People Ops Lead', 'HR Generalist', 'Talent Acquisition Specialist'],
         'Operations' => ['Operations Manager', 'Operations Executive', 'Facilities Coordinator'],
         'Marketing' => ['Marketing Manager', 'Marketing Executive', 'Content Writer'],
+    ];
+
+    public const PROBATION_MONTHS = [1, 2, 3, 6, 12];
+
+    public const DEGREE_PROGRAMS = [
+        'Matriculation', 'O Levels', 'Intermediate (FA)', 'Intermediate (FSc)', 'Intermediate (ICS)',
+        'Intermediate (ICom)', 'A Levels', 'Diploma of Associate Engineering (DAE)', 'Associate Degree',
+        'BA', 'BSc', 'BCom', 'BBA', 'BS Computer Science', 'BS Software Engineering', 'BS Information Technology',
+        'BE / BSc Engineering', 'MBBS', 'LLB', 'MA', 'MSc', 'MCom', 'MBA', 'MCS', 'MS / MPhil', 'PhD',
+        'ACCA', 'CA', 'Other',
     ];
 
     public function run(): void
@@ -52,6 +64,17 @@ class LookupSeeder extends Seeder
         ];
         foreach ($shifts as $shift) {
             Shift::query()->firstOrCreate(['name' => $shift['name']], $shift + ['break_minutes' => 60]);
+        }
+
+        foreach (self::PROBATION_MONTHS as $months) {
+            ProbationDuration::query()->firstOrCreate(
+                ['months' => $months],
+                ['name' => $months === 1 ? '1 month' : "{$months} months"],
+            );
+        }
+
+        foreach (self::DEGREE_PROGRAMS as $name) {
+            DegreeProgram::query()->firstOrCreate(['name' => $name]);
         }
     }
 }

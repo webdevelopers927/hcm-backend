@@ -11,7 +11,9 @@ it('returns PII and writes an activity log entry with who, whose record and ip',
     $this->getJson("/api/v1/employees/{$employee->id}/sensitive")
         ->assertOk()
         ->assertHeader('Cache-Control', 'no-store, private')
-        ->assertExactJson(['data' => ['employee_id' => $employee->id, 'cnic' => '35202-1111111-1']]);
+        ->assertExactJson(['data' => [
+            'employee_id' => $employee->id, 'cnic' => '35202-1111111-1', 'passport_no' => null, 'driving_license_no' => null, 'spouses' => [],
+        ]]);
 
     $log = Activity::query()->where('event', 'sensitive_viewed')->sole();
     expect($log->causer_id)->toBe($viewer->id)

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Employee;
+use App\Models\EmployeeSpouse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,6 +25,9 @@ class EmployeeSensitiveResource extends JsonResource
         return [
             'employee_id' => $employee->id,
             'cnic' => $employee->cnic,
+            'passport_no' => $employee->passport_no,
+            'driving_license_no' => $employee->driving_license_no,
+            'spouses' => $employee->spouses->map(fn (EmployeeSpouse $s) => ['id' => $s->id, 'cnic' => $s->cnic])->all(),
         ];
     }
 }

@@ -20,6 +20,8 @@ enum Permission: string
     case EmployeesViewSensitive = 'employees.view-sensitive';
     case EmployeesReset2fa = 'employees.reset-2fa';
     case EmployeesUnbindDevice = 'employees.unbind-device';
+    case DivisionsManage = 'divisions.manage';
+    case DegreeProgramsManage = 'degree-programs.manage';
 
     /**
      * @return list<string>

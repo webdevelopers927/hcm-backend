@@ -11,6 +11,7 @@ use App\Http\Requests\Employees\ListEmployeesRequest;
 use App\Http\Requests\Employees\StoreEmployeeRequest;
 use App\Http\Requests\Employees\UpdateEmployeeRequest;
 use App\Http\Resources\EmployeeCollection;
+use App\Http\Resources\EmployeeDetailResource;
 use App\Http\Resources\EmployeeProfileResource;
 use App\Models\Employee;
 use App\Models\User;
@@ -32,39 +33,47 @@ class EmployeeController extends Controller
 
     public function show(Employee $employee): EmployeeProfileResource
     {
+        // Drafts have no profile yet; GET /employees/{id}/details serves them.
+        abort_if($employee->is_draft, 404);
         Gate::authorize('view', $employee);
 
         return new EmployeeProfileResource($employee->load(EmployeeProfileResource::relations()));
     }
 
+    /** One-shot hire: the payload must already be complete. */
     public function store(StoreEmployeeRequest $request, CreateEmployee $createEmployee): JsonResponse
     {
         Gate::authorize('create', Employee::class);
 
-        $employee = $createEmployee->handle($request->validated());
+        /** @var User $actor */
+        $actor = $request->user();
+        $employee = $createEmployee->handle($request->validated(), $actor);
 
         return (new EmployeeProfileResource($employee->fresh(EmployeeProfileResource::relations())))
             ->response()
             ->setStatusCode(201);
     }
 
-    public function update(UpdateEmployeeRequest $request, Employee $employee, UpdateEmployee $updateEmployee): EmployeeProfileResource
+    /** Drafts and real employees; returns the full form record. */
+    public function update(UpdateEmployeeRequest $request, Employee $employee, UpdateEmployee $updateEmployee): EmployeeDetailResource
     {
         Gate::authorize('update', $employee);
 
         $updateEmployee->handle($employee, $request->validated());
 
-        return new EmployeeProfileResource($employee->fresh(EmployeeProfileResource::relations()));
+        return new EmployeeDetailResource($employee->fresh(EmployeeDetailResource::relations()));
     }
 
+    /** A real employee is soft deleted; a draft is discarded for good. */
     public function destroy(Request $request, Employee $employee, DeleteEmployee $deleteEmployee): JsonResponse
     {
         Gate::authorize('delete', $employee);
 
         /** @var User $actor */
         $actor = $request->user();
+        $draft = $employee->is_draft;
         $deleteEmployee->handle($actor, $employee, $request->ip());
 
-        return response()->json(['message' => 'Employee deleted.']);
+        return response()->json(['message' => $draft ? 'Draft deleted.' : 'Employee deleted.']);
     }
 }

@@ -151,6 +151,9 @@ its profile), contact info, employment, and placeholders for attendance and leav
 - Don't cache it (no persistent query cache, `cache: 'no-store'`). Re-mask on navigation away or after
   ~60 seconds.
 
+> **Superseded (2026-11-01):** the create/edit form is now the multi-section form with drafts described in
+> [api-v1-employee-form.md](api-v1-employee-form.md). The section below is kept for history only.
+
 ### `POST /employees` (create wizard, 3 steps)
 Suggested steps: 1) Personal 2) Job 3) Review. Validate each step client-side, but
 the server's 422 is the source of truth: map `errors` back to the right step and field, then jump to the

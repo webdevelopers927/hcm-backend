@@ -20,7 +20,7 @@ class EmployeeSeeder extends Seeder
 
         $make = fn () => Employee::factory()->withAccount();
 
-        $heads = $leadDesignations->take(4)->map(fn (Designation $d) => $make()->create([
+        $heads = $leadDesignations->take(4)->map(fn (Designation $d) => $make()->teamLead()->create([
             'designation_id' => $d->id,
             'department_id' => $d->department_id,
             'status' => EmployeeStatus::Active,
@@ -30,7 +30,7 @@ class EmployeeSeeder extends Seeder
         $managers = collect(range(1, 12))->map(function (int $i) use ($make, $heads, $leadDesignations) {
             $designation = $leadDesignations[$i % $leadDesignations->count()];
 
-            return $make()->create([
+            return $make()->teamLead()->create([
                 'designation_id' => $designation->id,
                 'department_id' => $designation->department_id,
                 'reports_to_id' => $heads[$i % $heads->count()]->id,

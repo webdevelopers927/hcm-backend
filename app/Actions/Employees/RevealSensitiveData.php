@@ -12,6 +12,8 @@ class RevealSensitiveData
      */
     public function handle(User $actor, Employee $employee, ?string $ip): Employee
     {
+        $employee->load('spouses:id,employee_id,sort_order,cnic');
+
         activity('employees')
             ->causedBy($actor)
             ->performedOn($employee)

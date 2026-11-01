@@ -34,8 +34,10 @@ class DownloadImportTemplate
             'shift' => Shift::query()->orderBy('id')->value('name') ?? '',
             'location' => Location::query()->orderBy('id')->value('name') ?? '',
             'reports_to' => '',
+            'has_team_authority' => 'no',
             'work_mode' => 'onsite',
             'status' => 'probation',
+            'duty_type' => 'full_time',
             'join_date' => now()->toDateString(),
         ];
 

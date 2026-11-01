@@ -646,25 +646,31 @@ Unknown or deleted id:
 ```
 
 ### `GET /employees/{id}/sensitive`: PII (reveal)
-Returns the CNIC. Every call writes an activity-log entry (`log_name=employees`, `event=sensitive_viewed`, causer = the viewer,
-subject = the employee, `properties.ip`). The response carries `Cache-Control: no-store, private`.
+Returns the full national ids, which every other response masks: CNIC, passport number, driving license
+number and each spouse's CNIC. Works for drafts too. Every call writes an activity-log entry
+(`log_name=employees`, `event=sensitive_viewed`, causer = the viewer, subject = the employee, `properties.ip`).
+The response carries `Cache-Control: no-store, private`.
 ```json
 # GET /api/v1/employees/1/sensitive
 # STATUS 200
 {
     "data": {
         "employee_id": 1,
-        "cnic": "45244-4627427-9"
+        "cnic": "45244-4627427-9",
+        "passport_no": "AB1234567",
+        "driving_license_no": null,
+        "spouses": [{ "id": 4, "cnic": "35202-1111111-2" }]
     }
 }
 ```
 
 ### `POST /employees`: create
-Required: `first_name`, `last_name`, `email` (unique across employees, including deleted ones, and users),
-`designation_id`, `department_id`, `join_date`.
-Optional: `pseudo_name`, `phone`, `cnic` (`^\d{5}-\d{7}-\d$`, unique via a blind index), `gender`
-(`male|female|other`), `birth_date`, `machine_uid`, `division_id`, `campaign_id`, `reports_to_id`, `work_mode`,
-`status` (default `active`), `shift_id`, `location_id`. Unknown fields (e.g. `gross_salary`) are ignored.
+One-shot hire. Accepts **every field of the employee form** (see
+[api-v1-employee-form.md](api-v1-employee-form.md), which also covers saving the form as a draft first).
+Required ("core set"): `first_name`, `last_name`, `email` (business email, unique across employees, including
+deleted ones, and users), `cnic` (`^\d{5}-\d{7}-\d$`, unique via a blind index), `department_id`,
+`designation_id`, `status` (employment status), `duty_type`, `join_date`; plus the conditional rules
+(remote access dates, work experience fields). Unknown fields (e.g. `gross_salary`) are ignored.
 
 In one transaction it creates the employee (code `EMP-NNNN` derived from the id) and a linked user. After commit it queues
 an invite email (the `log` mailer in dev) with a 72-hour set-password link to
@@ -769,7 +775,12 @@ Validation: `422`
 ```
 
 ### `PATCH /employees/{id}`: partial update
-Accepts the same fields, all optional. Changing name or email also updates the linked login user.
+Accepts the same fields, all optional; send only what changed. Works for drafts and real employees. For a
+real employee the saved result must still pass the core set, otherwise `422` and nothing is saved.
+Changing name or email also updates the linked login user.
+
+> **Changed:** the response is now the full form record (`EmployeeDetail`, see
+> [api-v1-employee-form.md](api-v1-employee-form.md)), not the profile shown below.
 ```json
 # PATCH /api/v1/employees/65
 # BODY {"work_mode":"remote"}
@@ -838,6 +849,7 @@ Accepts the same fields, all optional. Changing name or email also updates the l
 
 ### `DELETE /employees/{id}`
 Soft delete, revokes all of the linked user's tokens, and writes an activity-log entry (`event=deleted`).
+For a **draft** it deletes the row and its files for good (`event=draft_deleted`, message `"Draft deleted."`).
 ```json
 # DELETE /api/v1/employees/65
 # STATUS 200
@@ -987,8 +999,8 @@ Content-Type: text/csv; charset=UTF-8
 Content-Disposition: attachment; filename=employee-import-template.csv
 ```
 ```csv
-first_name*,last_name*,email*,phone,cnic,gender,birth_date,pseudo_name,machine_uid,department*,designation*,division,campaign,shift,location,reports_to,work_mode,status,join_date*
-Ayesha,Khan,ayesha.khan@company.pk,"+92 300 1234567",35202-1234567-1,female,1995-04-18,Ayesha,,"Customer Success","Customer Success Manager",,,Morning,Lahore,,onsite,probation,2026-11-01
+first_name*,last_name*,email*,phone,cnic*,gender,birth_date,pseudo_name,machine_uid,department*,designation*,division,campaign,shift,location,reports_to,has_team_authority,work_mode,status*,duty_type*,join_date*
+Ayesha,Khan,ayesha.khan@company.pk,"+92 300 1234567",35202-1234567-1,female,1995-04-18,Ayesha,,"Customer Success","Customer Success Manager",,,Morning,Lahore,,no,onsite,probation,full_time,2026-11-01
 ```
 
 ### `POST /employees/import`: bulk create from CSV/XLSX
@@ -1001,20 +1013,25 @@ Rules:
 - **Lookups by name**, case-insensitive: `department`, `designation` (must belong to that department),
   `division`, `campaign`, `shift`, `location`.
 - `reports_to`: an existing employee's **code or email**, or the **email of another row in the same file**
-  (resolved after insert). Self-references and cycles are rejected.
-- Enum values accept labels: `On leave` becomes `on_leave`, `Hybrid` becomes `hybrid`. Dates are `YYYY-MM-DD`;
-  Excel date cells, including unformatted serial numbers, are converted.
-- Each row is validated with the **same rules as `POST /employees`**, plus duplicate email, CNIC and machine_uid
-  checks within the file.
+  (resolved after insert). Self-references and cycles are rejected. The manager must have **team
+  authority**: an existing employee with it switched on, or a row in the file with `has_team_authority`
+  = `yes`.
+- `has_team_authority`: `yes`/`no` (also `true`/`false`, `y`/`n`, `1`/`0`); empty means no.
+- Enum values accept labels: `On leave` becomes `on_leave`, `Hybrid` becomes `hybrid`, `Full time` becomes
+  `full_time`. Dates are `YYYY-MM-DD`; Excel date cells, including unformatted serial numbers, are converted.
+- `phone` must be in international format (`+92 300 1234567`), since the file has no country column.
+- Each row is validated with the **same rules as `POST /employees`** (including the required core set),
+  plus duplicate email, CNIC and machine_uid checks within the file. The rest of the employee form
+  (family, qualifications, documents…) is filled in afterwards with `PATCH /employees/{id}`.
 - **All-or-nothing:** any invalid row means nothing is written (`422`, errors keyed `rows.<line>.<column>`,
   where line 1 is the header). On success, all rows are inserted in one transaction, an `imported` activity-log
   entry is written (count and ids), and an invite email is queued per employee.
 
 The example file has 2 rows; Maham reports to Bilal, who is a new row in the same file:
 ```csv
-first_name*,last_name*,email*,department*,designation*,join_date*,shift,location,work_mode,status,reports_to
-Bilal,Ashraf,bilal.ashraf@company.pk,Engineering,Software Engineer,2026-11-10,Morning,Lahore,hybrid,probation,EMP-0001
-Maham,Tariq,maham.tariq@company.pk,Engineering,QA Engineer,2026-11-10,Morning,Lahore,onsite,probation,bilal.ashraf@company.pk
+first_name*,last_name*,email*,cnic*,department*,designation*,status*,duty_type*,join_date*,shift,location,work_mode,reports_to,has_team_authority
+Bilal,Ashraf,bilal.ashraf@company.pk,35202-1000011-1,Engineering,Software Engineer,probation,Full time,2026-11-10,Morning,Lahore,hybrid,EMP-0001,yes
+Maham,Tariq,maham.tariq@company.pk,35202-1000012-2,Engineering,QA Engineer,probation,Internship,2026-11-10,Morning,Lahore,onsite,bilal.ashraf@company.pk,no
 ```
 
 Dry run (`dry_run=1`): `200`
@@ -1041,10 +1058,10 @@ Commit (`dry_run=0`): `201`
 
 A file with errors: `422`, nothing imported
 ```csv
-first_name*,last_name*,email*,department*,designation*,join_date*
-Bilal,Ashraf,ahmed.nawaz@company.pk,Engineering,Software Engineer,2026-11-10
-Maham,Tariq,maham.t@company.pk,Enginering,QA Engineer,10/11/2026
-Zara,Iqbal,zara.iqbal@company.pk,Finance,Software Engineer,2026-11-10
+first_name*,last_name*,email*,cnic*,department*,designation*,status*,duty_type*,join_date*
+Bilal,Ashraf,ahmed.nawaz@company.pk,35202-1000011-1,Engineering,Software Engineer,active,full_time,2026-11-10
+Maham,Tariq,maham.t@company.pk,35202-1000012-2,Enginering,QA Engineer,active,full_time,10/11/2026
+Zara,Iqbal,zara.iqbal@company.pk,35202-1000013-1,Finance,Software Engineer,active,full_time,2026-11-10
 ```
 ```json
 {

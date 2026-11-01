@@ -3,25 +3,35 @@
 namespace App\Actions\Employees;
 
 use App\Models\Employee;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
+use App\Support\FileBatch;
 
 class UpdateEmployee
 {
+    public function __construct(
+        private readonly SaveEmployee $save,
+        private readonly EmployeeCompleteness $completeness,
+    ) {}
+
     /**
-     * Partial update. Name or email changes are mirrored to the linked login account.
+     * Partial update of a draft or a real employee. A real employee must still be complete afterwards
+     * (otherwise nothing is saved), and name or email changes are mirrored to the linked login account.
      *
      * @param  array<string, mixed>  $data  validated UpdateEmployeeRequest data
      */
     public function handle(Employee $employee, array $data): Employee
     {
-        DB::transaction(function () use ($employee, $data) {
-            $employee->fill(Arr::only($data, CreateEmployee::EMPLOYEE_FIELDS));
-            $identityChanged = $employee->isDirty(['first_name', 'last_name', 'email']);
-            $employee->save();
+        FileBatch::transaction(function (FileBatch $files) use ($employee, $data) {
+            $this->save->handle($employee, $data, $files);
 
-            if ($identityChanged && $employee->user) {
-                $employee->user->forceFill([
+            if ($employee->is_draft) {
+                return;
+            }
+
+            $this->completeness->assertComplete($employee);
+
+            $user = $employee->user;
+            if ($user && ($user->name !== $employee->full_name || $user->email !== $employee->email)) {
+                $user->forceFill([
                     'name' => $employee->full_name,
                     'email' => $employee->email,
                 ])->save();

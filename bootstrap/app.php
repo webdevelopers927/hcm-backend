@@ -34,5 +34,5 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // Keep PII from request bodies out of flashed input.
-        $exceptions->dontFlash(['password', 'password_confirmation', 'current_password', 'cnic', 'iban', 'gross_salary']);
+        $exceptions->dontFlash(['password', 'password_confirmation', 'current_password', 'cnic', 'passport_no', 'driving_license_no']);
     })->create();

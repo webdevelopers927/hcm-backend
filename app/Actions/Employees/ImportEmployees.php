@@ -11,10 +11,10 @@ use App\Models\Employee;
 use App\Models\Location;
 use App\Models\Shift;
 use App\Models\User;
+use App\Support\FileBatch;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -29,12 +29,12 @@ class ImportEmployees
 {
     public const MAX_ROWS = 500;
 
-    public const REQUIRED_COLUMNS = ['first_name', 'last_name', 'email', 'department', 'designation', 'join_date'];
+    public const REQUIRED_COLUMNS = ['first_name', 'last_name', 'email', 'cnic', 'department', 'designation', 'status', 'duty_type', 'join_date'];
 
     public const COLUMNS = [
         'first_name', 'last_name', 'email', 'phone', 'cnic', 'gender', 'birth_date', 'pseudo_name', 'machine_uid',
-        'department', 'designation', 'division', 'campaign', 'shift', 'location', 'reports_to',
-        'work_mode', 'status', 'join_date',
+        'department', 'designation', 'division', 'campaign', 'shift', 'location', 'reports_to', 'has_team_authority',
+        'work_mode', 'status', 'duty_type', 'join_date',
     ];
 
     /** Validated id field => spreadsheet column, so errors point at the column the user typed. */
@@ -71,10 +71,10 @@ class ImportEmployees
 
         $passwordHash = Hash::make(Str::random(64));
 
-        $created = DB::transaction(function () use ($validated, $deferredManagers, $passwordHash, $actor, $ip) {
+        $created = FileBatch::transaction(function (FileBatch $files) use ($validated, $deferredManagers, $passwordHash, $actor, $ip) {
             $created = [];
             foreach ($validated as $line => $data) {
-                $created[$line] = $this->createEmployee->persist($data, $passwordHash);
+                $created[$line] = $this->createEmployee->persist($data, $files, $actor, $passwordHash);
             }
 
             // Managers that are themselves new rows in this file, resolved once every row has an id.
@@ -147,7 +147,12 @@ class ImportEmployees
                 $rowErrors['reports_to'][] = 'An employee cannot report to themselves.';
             }
 
-            $validator = Validator::make($data, $rules, [], $this->attributeNames());
+            // Same field rules as POST /employees, plus everything a complete employee needs.
+            $rowRules = $rules;
+            foreach (EmployeeCompleteness::rules($data) as $field => $required) {
+                $rowRules[$field] = [...$required, ...($rowRules[$field] ?? [])];
+            }
+            $validator = Validator::make($data, $rowRules, EmployeeCompleteness::messages(), $this->attributeNames());
             foreach ($validator->errors()->messages() as $field => $messages) {
                 $column = self::ID_COLUMNS[$field] ?? $field;
                 // A failed name lookup already explains the problem; don't add "field is required".
@@ -174,6 +179,17 @@ class ImportEmployees
 
         foreach ($this->cyclicLines($validated, $deferred) as $line) {
             $errors["rows.{$line}.reports_to"] = ['Reporting cycle between rows in this file.'];
+        }
+
+        // A manager who is a new row in this file needs team authority too.
+        $teamByEmail = [];
+        foreach ($validated as $data) {
+            $teamByEmail[strtolower((string) $data['email'])] = (bool) ($data['has_team_authority'] ?? false);
+        }
+        foreach ($deferred as $line => $managerEmail) {
+            if (isset($teamByEmail[$managerEmail]) && ! $teamByEmail[$managerEmail]) {
+                $errors["rows.{$line}.reports_to"] ??= ["{$managerEmail} does not have team authority (set has_team_authority to yes on their row)."];
+            }
         }
 
         if ($errors !== []) {
@@ -246,6 +262,8 @@ class ImportEmployees
             'machine_uid' => $value('machine_uid'),
             'work_mode' => $enum('work_mode'),
             'status' => $enum('status'),
+            'duty_type' => $enum('duty_type'),
+            'has_team_authority' => self::yesNo($value('has_team_authority')),
             'join_date' => self::excelDate($value('join_date')),
         ];
 
@@ -268,7 +286,9 @@ class ImportEmployees
         $managerEmail = null;
         $data['reports_to_id'] = null;
         if (($ref = $value('reports_to')) !== null) {
-            $existing = Employee::query()->where('code', $ref)->orWhere('email', strtolower($ref))->value('id');
+            $existing = Employee::query()->finalized()
+                ->where(fn ($q) => $q->where('code', $ref)->orWhere('email', strtolower($ref)))
+                ->value('id');
             if ($existing !== null) {
                 $data['reports_to_id'] = $existing;
             } elseif (isset($fileEmails[strtolower($ref)])) {
@@ -279,6 +299,17 @@ class ImportEmployees
         }
 
         return [$data, $errors, $managerEmail];
+    }
+
+    /** "Yes"/"No" (also true/false, y/n, 1/0); anything else passes through and fails the boolean rule. */
+    private static function yesNo(?string $value): bool|string|null
+    {
+        return match (strtolower((string) $value)) {
+            '' => null,
+            'yes', 'y', 'true', '1' => true,
+            'no', 'n', 'false', '0' => false,
+            default => $value,
+        };
     }
 
     /**

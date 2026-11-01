@@ -28,9 +28,10 @@ class EmployeeProfileResource extends EmployeeListResource
             'location:id,name',
             'user:id,two_factor_enabled',
             'activeDevice',
-            'reportsTo:id,first_name,last_name,avatar_path,designation_id',
+            'reportsTo:id,first_name,middle_name,last_name,avatar_path,designation_id',
             'reportsTo.designation:id,name',
-            'directReports' => fn ($q) => $q->select(['id', 'first_name', 'last_name', 'avatar_path', 'designation_id', 'reports_to_id'])
+            'directReports' => fn ($q) => $q->select(['id', 'first_name', 'middle_name', 'last_name', 'avatar_path', 'designation_id', 'reports_to_id'])
+                ->where('is_draft', false)
                 ->orderBy('first_name')->orderBy('last_name'),
             'directReports.designation:id,name',
         ];
@@ -52,8 +53,8 @@ class EmployeeProfileResource extends EmployeeListResource
             'reports_to' => $employee->reportsTo ? new EmployeeSummaryResource($employee->reportsTo) : null,
             'direct_reports' => EmployeeSummaryResource::collection($employee->directReports),
             'employment' => [
-                'join_date' => $employee->join_date->toDateString(),
-                'status' => $employee->status->value,
+                'join_date' => $employee->join_date?->toDateString(),
+                'status' => $employee->status?->value,
             ],
             // Placeholders until the attendance and leave modules exist; keys kept for a stable contract.
             'attendance_rate' => null,

@@ -17,7 +17,7 @@ beforeEach(function () {
 });
 
 const IMPORT_HEADER = ['first_name*', 'last_name*', 'email*', 'department*', 'designation*', 'join_date*',
-    'cnic', 'work_mode', 'status', 'shift', 'location', 'reports_to'];
+    'cnic*', 'work_mode', 'status*', 'duty_type*', 'shift', 'location', 'reports_to', 'has_team_authority'];
 
 /** @param list<list<string>> $rows */
 function importCsv(array $rows, array $header = IMPORT_HEADER): UploadedFile
@@ -34,9 +34,12 @@ function importCsv(array $rows, array $header = IMPORT_HEADER): UploadedFile
 
 function validRow(string $first, string $email, array $override = []): array
 {
+    // A CNIC derived from the email, so each test row is unique but stable.
+    $cnic = sprintf('35202-%07d-1', crc32(strtolower($email)) % 10_000_000);
+
     $row = array_combine(array_map(fn ($h) => rtrim($h, '*'), IMPORT_HEADER), [
         $first, 'Raza', $email, 'engineering', 'Software Engineer', '2025-02-01',
-        '', 'Hybrid', 'On leave', 'morning', 'Lahore', '',
+        $cnic, 'Hybrid', 'On leave', 'Full time', 'morning', 'Lahore', '', 'no',
     ]);
 
     return array_values(array_merge($row, $override));
@@ -81,6 +84,8 @@ it('imports every row like a single create: employee, user and invite', function
         ->and($ali->designation->name)->toBe('Software Engineer')
         ->and($ali->work_mode->value)->toBe('hybrid')
         ->and($ali->status->value)->toBe('on_leave')
+        ->and($ali->duty_type->value)->toBe('full_time')
+        ->and($ali->is_draft)->toBeFalse()
         ->and($ali->shift->name)->toBe('Morning')
         ->and($ali->code)->toStartWith('EMP-')
         ->and($ali->join_date->toDateString())->toBe('2025-02-01')
@@ -117,10 +122,10 @@ it('rejects the whole file with row-numbered errors and writes nothing', functio
 });
 
 it('resolves reports_to from existing employee codes/emails and from other rows in the file', function () {
-    $boss = Employee::factory()->create();
+    $boss = Employee::factory()->teamLead()->create();
 
     postImport(importCsv([
-        validRow('Lead', 'lead@company.pk', ['reports_to' => $boss->fresh()->code]),
+        validRow('Lead', 'lead@company.pk', ['reports_to' => $boss->fresh()->code, 'has_team_authority' => 'Yes']),
         validRow('Dev', 'dev@company.pk', ['reports_to' => 'lead@company.pk']),
         validRow('Qa', 'qa@company.pk', ['reports_to' => $boss->email]),
     ]))->assertCreated();
@@ -129,6 +134,25 @@ it('resolves reports_to from existing employee codes/emails and from other rows 
     expect($lead->reports_to_id)->toBe($boss->id)
         ->and(Employee::where('email', 'dev@company.pk')->value('reports_to_id'))->toBe($lead->id)
         ->and(Employee::where('email', 'qa@company.pk')->value('reports_to_id'))->toBe($boss->id);
+});
+
+it('requires team authority from managers, existing or in the file', function () {
+    $plain = Employee::factory()->create();
+
+    postImport(importCsv([
+        validRow('A', 'a@company.pk', ['reports_to' => $plain->email]),
+        validRow('B', 'b@company.pk'),
+        validRow('C', 'c@company.pk', ['reports_to' => 'b@company.pk']),
+    ]))->assertStatus(422)
+        ->assertJsonValidationErrors(['rows.2.reports_to', 'rows.4.reports_to'])
+        ->assertJsonPath('errors', fn ($errors) => str_contains($errors['rows.2.reports_to'][0], 'team authority')
+            && str_contains($errors['rows.4.reports_to'][0], 'team authority'));
+});
+
+it('requires the core employee fields on every row', function () {
+    postImport(importCsv([validRow('A', 'a@company.pk', ['cnic' => '', 'duty_type' => '', 'status' => ''])]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['rows.2.cnic', 'rows.2.duty_type', 'rows.2.status']);
 });
 
 it('rejects unknown managers and reporting cycles inside the file', function () {

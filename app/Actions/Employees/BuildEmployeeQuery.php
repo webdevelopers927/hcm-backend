@@ -17,7 +17,7 @@ class BuildEmployeeQuery
     /** Columns the list item / export need; never PII. */
     public const LIST_COLUMNS = [
         'employees.id', 'employees.user_id', 'employees.code', 'employees.machine_uid',
-        'employees.first_name', 'employees.last_name', 'employees.pseudo_name', 'employees.email',
+        'employees.first_name', 'employees.middle_name', 'employees.last_name', 'employees.pseudo_name', 'employees.email',
         'employees.avatar_path', 'employees.designation_id', 'employees.department_id',
         'employees.shift_id', 'employees.campaign_id', 'employees.location_id',
         'employees.status', 'employees.work_mode', 'employees.join_date',
@@ -45,7 +45,8 @@ class BuildEmployeeQuery
      */
     public function handle(array $filters, array $except = []): Builder
     {
-        $query = Employee::query();
+        // Drafts have their own list (GET /employees/drafts).
+        $query = Employee::query()->finalized();
 
         foreach (self::IN_FILTERS as $key => $column) {
             if (in_array($key, $except, true) || empty($filters[$key])) {

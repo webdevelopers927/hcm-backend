@@ -51,14 +51,14 @@ class ExportEmployees
         return [
             (string) $e->code,
             $e->full_name,
-            $e->email,
+            (string) $e->email,
             (string) $e->designation?->name,
             (string) $e->department?->name,
-            $e->status->label(),
+            (string) $e->status?->label(),
             $e->work_mode->label(),
             $shift,
             (string) $e->location?->name,
-            $e->join_date->toDateString(),
+            (string) $e->join_date?->toDateString(),
         ];
     }
 
