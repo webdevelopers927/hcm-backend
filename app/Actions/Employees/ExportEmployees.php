@@ -22,7 +22,7 @@ class ExportEmployees
     {
         $query = $this->builder->handle($filters)
             ->select(BuildEmployeeQuery::LIST_COLUMNS)
-            ->with(['designation:id,name', 'department:id,name', 'shift:id,name,start_time,end_time', 'location:id,name']);
+            ->with(['employmentStatus:id,name', 'designation:id,name', 'department:id,name', 'shift:id,name,start_time,end_time', 'location:id,name']);
         $query = $this->builder->sort($query, $filters['sort'] ?? null);
 
         $filename = 'employees-'.now()->format('Y-m-d-His').'.'.$format;
@@ -54,7 +54,7 @@ class ExportEmployees
             (string) $e->email,
             (string) $e->designation?->name,
             (string) $e->department?->name,
-            (string) $e->status?->label(),
+            (string) $e->employmentStatus?->name,
             $e->work_mode->label(),
             $shift,
             (string) $e->location?->name,

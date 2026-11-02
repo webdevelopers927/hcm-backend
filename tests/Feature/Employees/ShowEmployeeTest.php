@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Employee;
+use App\Models\EmploymentStatus;
 
 beforeEach(fn () => actingAsUser());
 
@@ -68,12 +69,13 @@ it('returns every dropdown option from the filters endpoint', function () {
             'campaigns' => [['id', 'name']],
             'shifts' => [['id', 'name', 'start', 'end']],
             'locations' => [['id', 'name']],
-            'statuses' => [['value', 'label']],
+            'employment_statuses' => [['id', 'name', 'can_login', 'is_notice_period']],
             'work_modes' => [['value', 'label']],
         ]])
         ->assertJsonCount(8, 'data.departments')
         ->assertJsonCount(4, 'data.shifts')
-        ->assertJsonCount(5, 'data.statuses')
+        ->assertJsonCount(EmploymentStatus::count(), 'data.employment_statuses')
+        ->assertJsonPath('data.employment_statuses.0.name', 'Active')
         ->assertJsonCount(3, 'data.work_modes')
         ->assertJsonFragment(['name' => 'Morning', 'start' => '09:00', 'end' => '18:00']);
 });

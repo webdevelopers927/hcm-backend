@@ -24,7 +24,7 @@ beforeEach(function () {
         'cnic' => '35202-1234567-2',
         'department_id' => $designation->department_id,
         'designation_id' => $designation->id,
-        'status' => 'active',
+        'employment_status_id' => statusId('Active'),
         'duty_type' => 'full_time',
         'join_date' => '2026-01-05',
     ];
@@ -85,7 +85,7 @@ it('saves every personal, positional, contact and other field and reads them bac
         'email' => 'ayesha.khan@company.pk',
         'department_id' => $this->core['department_id'],
         'designation_id' => $this->core['designation_id'],
-        'status' => 'probation',
+        'employment_status_id' => statusId('Probation'),
         'duty_type' => 'contract',
         'join_date' => '2026-01-05',
         'probation_start_date' => '2026-01-05',

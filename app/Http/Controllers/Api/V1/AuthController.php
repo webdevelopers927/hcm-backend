@@ -23,6 +23,12 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['email' => __('auth.failed')]);
         }
 
+        // Only reached with the right password, so this reveals nothing to a stranger.
+        $employee = Employee::query()->where('user_id', $user->id)->first(['id', 'employment_status_id']);
+        if ($employee && ! $employee->loginAllowed()) {
+            throw ValidationException::withMessages(['email' => 'Your employment status does not allow signing in. Please contact HR.']);
+        }
+
         $user->forceFill(['last_login_at' => now()])->save();
         $token = $user->createToken((string) ($request->validated('device_name') ?? 'api'))->plainTextToken;
 

@@ -1,12 +1,12 @@
 <?php
 
-use App\Enums\EmployeeStatus;
 use App\Enums\WorkMode;
 use App\Models\Campaign;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Division;
 use App\Models\Employee;
+use App\Models\EmploymentStatus;
 use App\Models\Location;
 use App\Models\Shift;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +21,7 @@ it('returns the list contract with meta and status counts', function () {
         ->assertJsonStructure([
             'data' => [['shift' => ['id', 'name', 'start', 'end'], 'can' => ['update', 'delete', 'reset_2fa', 'unbind_device']]],
             'meta' => ['current_page', 'last_page', 'per_page', 'total'],
-            'status_counts' => ['all', 'active', 'probation', 'on_leave', 'notice_period', 'inactive'],
+            'status_counts' => ['all', 'on_notice', 'by_status'],
         ])
         ->assertJsonPath('meta.total', 3)
         ->assertJsonPath('meta.per_page', 12)
@@ -95,27 +95,46 @@ it('filters by each id filter', function (string $param, string $model) {
     ['location_id', Location::class],
 ]);
 
-it('filters by status and work mode', function () {
-    Employee::factory()->count(2)->create(['status' => EmployeeStatus::Probation, 'work_mode' => WorkMode::Remote]);
-    Employee::factory()->count(3)->create(['status' => EmployeeStatus::Active, 'work_mode' => WorkMode::Onsite]);
+it('filters by employment status and work mode', function () {
+    [$active, $probation] = [statusId('Active'), statusId('Probation')];
+    Employee::factory()->count(2)->create(['employment_status_id' => $probation, 'work_mode' => WorkMode::Remote]);
+    Employee::factory()->count(3)->create(['employment_status_id' => $active, 'work_mode' => WorkMode::Onsite]);
 
-    $this->getJson('/api/v1/employees?status[]=probation')->assertJsonPath('meta.total', 2);
+    $this->getJson("/api/v1/employees?employment_status_id[]={$probation}")
+        ->assertJsonPath('meta.total', 2)
+        ->assertJsonPath('data.0.employment_status', ['id' => $probation, 'name' => 'Probation', 'can_login' => true, 'is_notice_period' => false]);
     $this->getJson('/api/v1/employees?work_mode[]=onsite')->assertJsonPath('meta.total', 3);
-    $this->getJson('/api/v1/employees?status=active,probation')->assertJsonPath('meta.total', 5);
+    $this->getJson("/api/v1/employees?employment_status_id={$active},{$probation}")->assertJsonPath('meta.total', 5);
+});
+
+it('filters everyone on notice, across notice-period statuses', function () {
+    Employee::factory()->inStatus('Notice period')->create();
+    Employee::factory()->inStatus('Serving notice (terminated)')->create();
+    Employee::factory()->inStatus('Active')->count(2)->create();
+
+    $this->getJson('/api/v1/employees?on_notice=1')
+        ->assertJsonPath('meta.total', 2)
+        ->assertJsonPath('status_counts.on_notice', 2)
+        ->assertJsonPath('status_counts.all', 4);
 });
 
 it('computes status counts with every filter except status', function () {
+    [$active, $probation] = [statusId('Active'), statusId('Probation')];
     $remote = ['work_mode' => WorkMode::Remote];
-    Employee::factory()->count(2)->create(['status' => EmployeeStatus::Active] + $remote);
-    Employee::factory()->count(1)->create(['status' => EmployeeStatus::Probation] + $remote);
-    Employee::factory()->count(4)->create(['status' => EmployeeStatus::Active, 'work_mode' => WorkMode::Onsite]);
+    Employee::factory()->count(2)->create(['employment_status_id' => $active] + $remote);
+    Employee::factory()->count(1)->create(['employment_status_id' => $probation] + $remote);
+    Employee::factory()->count(4)->create(['employment_status_id' => $active, 'work_mode' => WorkMode::Onsite]);
 
-    $this->getJson('/api/v1/employees?work_mode[]=remote&status[]=probation')
+    $counts = $this->getJson("/api/v1/employees?work_mode[]=remote&employment_status_id[]={$probation}")
         ->assertOk()
         ->assertJsonPath('meta.total', 1)
-        ->assertJsonPath('status_counts', [
-            'all' => 3, 'active' => 2, 'probation' => 1, 'on_leave' => 0, 'notice_period' => 0, 'inactive' => 0,
-        ]);
+        ->json('status_counts');
+
+    expect($counts['all'])->toBe(3)
+        ->and($counts['by_status'][$active])->toBe(2)
+        ->and($counts['by_status'][$probation])->toBe(1)
+        ->and($counts['by_status'][statusId('Inactive')])->toBe(0)
+        ->and($counts['by_status'])->toHaveCount(EmploymentStatus::count());
 });
 
 it('excludes soft-deleted employees', function () {
@@ -161,7 +180,8 @@ it('validates list parameters', function (string $query, string $field) {
     $this->getJson('/api/v1/employees?'.$query)->assertStatus(422)->assertJsonValidationErrors([$field]);
 })->with([
     ['sort=salary', 'sort'],
-    ['status[]=fired', 'status.0'],
+    ['employment_status_id[]=abc', 'employment_status_id.0'],
+    ['on_notice=maybe', 'on_notice'],
     ['work_mode[]=moon', 'work_mode.0'],
     ['department_id[]=abc', 'department_id.0'],
     ['per_page=0', 'per_page'],

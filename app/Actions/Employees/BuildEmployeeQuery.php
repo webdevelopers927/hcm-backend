@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Builds the filtered + sorted employee query shared by the list, status counts and export.
  *
- * Filter keys (all optional): search, status[], department_id[], designation_id[], division_id[],
- * campaign_id[], shift_id[], location_id[], work_mode[], ids[].
+ * Filter keys (all optional): search, employment_status_id[], on_notice (bool), department_id[],
+ * designation_id[], division_id[], campaign_id[], shift_id[], location_id[], work_mode[], ids[].
  */
 class BuildEmployeeQuery
 {
@@ -20,12 +20,12 @@ class BuildEmployeeQuery
         'employees.first_name', 'employees.middle_name', 'employees.last_name', 'employees.pseudo_name', 'employees.email',
         'employees.avatar_path', 'employees.designation_id', 'employees.department_id',
         'employees.shift_id', 'employees.campaign_id', 'employees.location_id',
-        'employees.status', 'employees.work_mode', 'employees.join_date',
+        'employees.employment_status_id', 'employees.work_mode', 'employees.join_date',
     ];
 
     /** Filter key => column for the simple "IN (...)" filters. */
     private const IN_FILTERS = [
-        'status' => 'employees.status',
+        'employment_status_id' => 'employees.employment_status_id',
         'department_id' => 'employees.department_id',
         'designation_id' => 'employees.designation_id',
         'division_id' => 'employees.division_id',
@@ -40,7 +40,7 @@ class BuildEmployeeQuery
 
     /**
      * @param  array<string, mixed>  $filters
-     * @param  list<string>  $except  filter keys to ignore (status counts drop "status")
+     * @param  list<string>  $except  filter keys to ignore (status counts drop "employment_status_id")
      * @return Builder<Employee>
      */
     public function handle(array $filters, array $except = []): Builder
@@ -53,6 +53,11 @@ class BuildEmployeeQuery
                 continue;
             }
             $query->whereIn($column, (array) $filters[$key]);
+        }
+
+        // Anyone in a status flagged as a notice period, whatever it is called.
+        if (! empty($filters['on_notice']) && ! in_array('on_notice', $except, true)) {
+            $query->whereHas('employmentStatus', fn (Builder $q) => $q->where('is_notice_period', true));
         }
 
         $search = trim((string) ($filters['search'] ?? ''));

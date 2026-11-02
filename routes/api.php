@@ -14,7 +14,9 @@ use App\Http\Controllers\Api\V1\EmployeeFilterController;
 use App\Http\Controllers\Api\V1\EmployeeFormOptionsController;
 use App\Http\Controllers\Api\V1\EmployeeImportController;
 use App\Http\Controllers\Api\V1\EmployeeSensitiveController;
+use App\Http\Controllers\Api\V1\EmployeeShiftController;
 use App\Http\Controllers\Api\V1\EmployeeTwoFactorController;
+use App\Http\Controllers\Api\V1\EmploymentStatusController;
 use App\Http\Controllers\Api\V1\GeoController;
 use App\Http\Controllers\Api\V1\UploadController;
 use Illuminate\Support\Facades\Route;
@@ -34,8 +36,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('nationalities', [GeoController::class, 'nationalities']);
     Route::apiResource('divisions', DivisionController::class);
     Route::apiResource('degree-programs', DegreeProgramController::class);
+    Route::apiResource('employment-statuses', EmploymentStatusController::class);
 
     Route::post('uploads', [UploadController::class, 'store'])->middleware('throttle:uploads');
+
+    // Shift records
+    Route::get('employee-shifts', [EmployeeShiftController::class, 'index']);
+    Route::post('employee-shifts/assign', [EmployeeShiftController::class, 'assign']);
+    Route::delete('employee-shifts/assignments/{assignment}', [EmployeeShiftController::class, 'cancel']);
 
     // Static paths first so they are not captured by {employee}.
     Route::get('employees/filters', EmployeeFilterController::class);
@@ -50,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('employees', EmployeeController::class);
 
     Route::get('employees/{employee}/details', EmployeeDetailController::class);
+    Route::get('employees/{employee}/shift-history', [EmployeeShiftController::class, 'history']);
     Route::post('employees/{employee}/submit', [EmployeeDraftController::class, 'submit']);
     Route::get('employees/{employee}/sensitive', EmployeeSensitiveController::class);
     Route::post('employees/{employee}/two-factor/reset', EmployeeTwoFactorController::class);

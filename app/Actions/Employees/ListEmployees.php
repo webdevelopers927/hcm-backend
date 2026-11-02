@@ -2,8 +2,8 @@
 
 namespace App\Actions\Employees;
 
-use App\Enums\EmployeeStatus;
 use App\Models\Employee;
+use App\Models\EmploymentStatus;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ListEmployees
@@ -25,28 +25,31 @@ class ListEmployees
     }
 
     /**
-     * Counts per status using every current filter except status itself, so the status tabs
-     * stay correct while other filters are applied. One grouped query.
+     * Counts per employment status using every current filter except the status ones, so the status
+     * tabs stay correct while other filters are applied. One grouped query.
      *
      * @param  array<string, mixed>  $filters
-     * @return array<string, int>
+     * @return array{all: int, on_notice: int, by_status: array<int, int>}
      */
     public function statusCounts(array $filters): array
     {
-        /** @var array<string, int> $rows */
-        $rows = $this->builder->handle($filters, except: ['status'])
+        /** @var array<int|string, int> $rows */
+        $rows = $this->builder->handle($filters, except: ['employment_status_id', 'on_notice'])
             ->toBase()
-            ->selectRaw('employees.status, count(*) as aggregate')
-            ->groupBy('employees.status')
-            ->pluck('aggregate', 'status')
+            ->selectRaw('employees.employment_status_id, count(*) as aggregate')
+            ->groupBy('employees.employment_status_id')
+            ->pluck('aggregate', 'employment_status_id')
             ->all();
 
-        $counts = ['all' => (int) array_sum($rows)];
-        foreach (EmployeeStatus::cases() as $status) {
-            $counts[$status->value] = (int) ($rows[$status->value] ?? 0);
+        $statuses = EmploymentStatus::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'is_notice_period']);
+        $byStatus = [];
+        $onNotice = 0;
+        foreach ($statuses as $status) {
+            $byStatus[$status->id] = (int) ($rows[$status->id] ?? 0);
+            $onNotice += $status->is_notice_period ? $byStatus[$status->id] : 0;
         }
 
-        return $counts;
+        return ['all' => (int) array_sum($rows), 'on_notice' => $onNotice, 'by_status' => $byStatus];
     }
 
     /**
@@ -61,6 +64,7 @@ class ListEmployees
             'campaign:id,name',
             'location:id,name',
             'user:id,two_factor_enabled',
+            'employmentStatus:id,name,can_login,is_notice_period',
         ];
     }
 }

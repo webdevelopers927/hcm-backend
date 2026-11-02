@@ -2,6 +2,7 @@
 
 use App\Models\Employee;
 use App\Models\User;
+use Database\Factories\EmployeeFactory;
 use Database\Seeders\LookupSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -76,11 +77,17 @@ function uploadFile(string $purpose, ?UploadedFile $file = null): string
         ->json('data.id');
 }
 
+/** Id of a seeded employment status, by name ("Active", "Notice period"…). */
+function statusId(string $name): int
+{
+    return (int) EmployeeFactory::statusId($name);
+}
+
 /** Shape of an EmployeeListItem; used to assert the list contract. */
 function employeeListItemKeys(): array
 {
     return [
         'id', 'code', 'machine_uid', 'name', 'pseudo_name', 'email', 'avatar_url', 'designation', 'department',
-        'status', 'work_mode', 'shift', 'campaign', 'location', 'join_date', 'two_factor_enabled', 'device_bound', 'can',
+        'employment_status', 'work_mode', 'shift', 'campaign', 'location', 'join_date', 'two_factor_enabled', 'device_bound', 'can',
     ];
 }

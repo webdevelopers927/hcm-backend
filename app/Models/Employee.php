@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Enums\BloodGroup;
 use App\Enums\DutyType;
 use App\Enums\EmergencyContactRelation;
-use App\Enums\EmployeeStatus;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
 use App\Enums\Religion;
@@ -70,7 +69,7 @@ use Illuminate\Support\Facades\Storage;
  * @property int|null $reports_to_id
  * @property int|null $indirect_reports_to_id
  * @property WorkMode $work_mode
- * @property EmployeeStatus|null $status employment status
+ * @property int|null $employment_status_id
  * @property DutyType|null $duty_type
  * @property Carbon|null $join_date
  * @property Carbon|null $probation_start_date
@@ -107,7 +106,7 @@ class Employee extends Model
         'email', 'personal_email', 'gender', 'birth_date', 'cnic', 'cnic_expiry',
         'country_id', 'state_id', 'city_id', 'nationality_id', 'marital_status', 'religion', 'blood_group',
         'designation_id', 'department_id', 'division_id', 'campaign_id', 'shift_id', 'location_id',
-        'reports_to_id', 'indirect_reports_to_id', 'work_mode', 'status', 'duty_type', 'join_date',
+        'reports_to_id', 'indirect_reports_to_id', 'work_mode', 'employment_status_id', 'duty_type', 'join_date',
         'probation_start_date', 'probation_duration_id', 'confirmation_date', 'separation_date',
         'has_team_authority', 'remote_access', 'permanent_remote_access', 'remote_access_from', 'remote_access_until',
         'phone', 'secondary_phone', 'landline', 'permanent_address', 'present_address',
@@ -163,7 +162,6 @@ class Employee extends Model
             'blood_group' => BloodGroup::class,
             'emergency_contact_relation' => EmergencyContactRelation::class,
             'work_mode' => WorkMode::class,
-            'status' => EmployeeStatus::class,
             'duty_type' => DutyType::class,
             'birth_date' => 'date',
             'cnic_expiry' => 'date',
@@ -244,6 +242,16 @@ class Employee extends Model
         return $this->avatar_path ? Storage::disk('public')->url($this->avatar_path) : null;
     }
 
+    /** Whether this employee's employment status allows signing in (no status: allowed). */
+    public function loginAllowed(): bool
+    {
+        if ($this->employment_status_id === null) {
+            return true;
+        }
+
+        return (bool) EmploymentStatus::query()->whereKey($this->employment_status_id)->value('can_login');
+    }
+
     /** Last day of probation, when both the start and the duration are known. */
     public function probationEndDate(): ?Carbon
     {
@@ -268,6 +276,14 @@ class Employee extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_id');
+    }
+
+    /**
+     * @return BelongsTo<EmploymentStatus, $this>
+     */
+    public function employmentStatus(): BelongsTo
+    {
+        return $this->belongsTo(EmploymentStatus::class);
     }
 
     /**
@@ -420,6 +436,16 @@ class Employee extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(EmployeeDocument::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * Shift history, oldest first.
+     *
+     * @return HasMany<EmployeeShiftAssignment, $this>
+     */
+    public function shiftAssignments(): HasMany
+    {
+        return $this->hasMany(EmployeeShiftAssignment::class)->orderBy('effective_from');
     }
 
     /**

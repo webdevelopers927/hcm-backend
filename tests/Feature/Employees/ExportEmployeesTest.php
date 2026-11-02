@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\EmployeeStatus;
 use App\Models\Employee;
 
 beforeEach(fn () => actingAsUser());
@@ -35,12 +34,13 @@ it('streams a CSV with the agreed columns and no PII', function () {
 });
 
 it('applies list filters to the export', function () {
-    Employee::factory()->count(2)->create(['status' => EmployeeStatus::Inactive]);
-    Employee::factory()->count(3)->create(['status' => EmployeeStatus::Active]);
+    Employee::factory()->count(2)->inStatus('Inactive')->create();
+    Employee::factory()->count(3)->inStatus('Active')->create();
 
-    $rows = parseCsv($this->postJson('/api/v1/employees/export', ['format' => 'csv', 'status' => ['inactive']])->streamedContent());
+    $rows = parseCsv($this->postJson('/api/v1/employees/export', ['format' => 'csv', 'employment_status_id' => [statusId('Inactive')]])->streamedContent());
 
-    expect($rows)->toHaveCount(3); // header + 2
+    expect($rows)->toHaveCount(3) // header + 2
+        ->and($rows[1][5])->toBe('Inactive');
 });
 
 it('exports only the selected ids when given', function () {
@@ -91,5 +91,5 @@ it('validates the export request', function (array $payload, string $field) {
     [[], 'format'],
     [['format' => 'pdf'], 'format'],
     [['format' => 'csv', 'ids' => ['x']], 'ids.0'],
-    [['format' => 'csv', 'status' => ['nope']], 'status.0'],
+    [['format' => 'csv', 'employment_status_id' => ['nope']], 'employment_status_id.0'],
 ]);

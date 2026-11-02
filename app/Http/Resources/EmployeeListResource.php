@@ -39,7 +39,7 @@ class EmployeeListResource extends JsonResource
             'avatar_url' => $employee->avatar_url,
             'designation' => self::idName($employee->designation),
             'department' => self::idName($employee->department),
-            'status' => $employee->status?->value,
+            'employment_status' => $employee->employmentStatus?->toRef(),
             'work_mode' => $employee->work_mode->value,
             'shift' => $employee->shift ? [
                 'id' => $employee->shift->id,

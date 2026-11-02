@@ -2,6 +2,7 @@
 
 namespace App\Actions\Employees;
 
+use App\Actions\Shifts\AssignShift;
 use App\Mail\EmployeeInvitation;
 use App\Models\Employee;
 use App\Models\User;
@@ -17,6 +18,7 @@ class CreateEmployee
     public function __construct(
         private readonly SaveEmployee $save,
         private readonly EmployeeCompleteness $completeness,
+        private readonly AssignShift $assignShift,
     ) {}
 
     /**
@@ -88,11 +90,24 @@ class CreateEmployee
         $employee->code ??= Employee::formatCode($employee->id);
         $employee->save();
 
+        // Start of the shift history: the shift they were hired on, from their first day.
+        if ($employee->shift_id) {
+            $this->assignShift->record(
+                $employee->id, $employee->shift_id, ($employee->join_date ?? today())->toDateString(),
+                $employee->created_by_id, alreadyApplied: true,
+            );
+        }
+
         return $user;
     }
 
+    /** No invite for a status that may not sign in; the link would be useless. */
     public function sendInvite(Employee $employee, User $user): void
     {
+        if (! $employee->loginAllowed()) {
+            return;
+        }
+
         $token = Password::broker('invites')->createToken($user);
         Mail::to($user->email)->queue(new EmployeeInvitation($employee->id, $user->name, $user->email, $token));
     }

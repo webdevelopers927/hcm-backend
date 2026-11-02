@@ -31,7 +31,7 @@ final class EmployeeAttributeNames
             'location_id' => 'location',
             'reports_to_id' => 'reporting authority',
             'indirect_reports_to_id' => 'indirect reporting authority',
-            'status' => 'employment status',
+            'employment_status_id' => 'employment status',
             'duty_type' => 'duty type',
             'join_date' => 'date of joining',
             'probation_duration_id' => 'probation duration',

@@ -40,7 +40,7 @@ class EmployeeCompleteness
             'cnic' => ['required'],
             'department_id' => ['required'],
             'designation_id' => ['required'],
-            'status' => ['required'],
+            'employment_status_id' => ['required'],
             'duty_type' => ['required'],
             'join_date' => ['required'],
 
@@ -120,7 +120,7 @@ class EmployeeCompleteness
     public static function data(Employee $employee): array
     {
         $data = [];
-        foreach (['first_name', 'last_name', 'email', 'cnic', 'department_id', 'designation_id', 'status', 'duty_type',
+        foreach (['first_name', 'last_name', 'email', 'cnic', 'department_id', 'designation_id', 'employment_status_id', 'duty_type',
             'join_date', 'remote_access', 'permanent_remote_access', 'remote_access_from', 'remote_access_until',
             'has_work_experience'] as $key) {
             $value = $employee->getAttribute($key);

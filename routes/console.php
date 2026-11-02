@@ -12,3 +12,6 @@ Schedule::command('sanctum:prune-expired --hours=24')->daily();
 
 // Uploads that were never attached to an employee.
 Schedule::command('uploads:prune')->hourly();
+
+// Shift changes scheduled for today (or missed while the scheduler was down).
+Schedule::command('shifts:apply-scheduled')->dailyAt('00:05');

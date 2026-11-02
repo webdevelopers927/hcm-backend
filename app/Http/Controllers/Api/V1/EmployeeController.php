@@ -59,7 +59,9 @@ class EmployeeController extends Controller
     {
         Gate::authorize('update', $employee);
 
-        $updateEmployee->handle($employee, $request->validated());
+        /** @var User $actor */
+        $actor = $request->user();
+        $updateEmployee->handle($employee, $request->validated(), $actor);
 
         return new EmployeeDetailResource($employee->fresh(EmployeeDetailResource::relations()));
     }

@@ -29,7 +29,7 @@ beforeEach(function () {
         'shift_id' => Shift::first()->id,
         'location_id' => Location::first()->id,
         'join_date' => '2024-03-12',
-        'status' => 'active',
+        'employment_status_id' => statusId('Active'),
         'duty_type' => 'full_time',
     ];
 });
@@ -41,7 +41,7 @@ it('creates the employee and user in one go and returns 201 profile', function (
         ->assertJsonPath('data.name', 'Fatima Javed')
         ->assertJsonPath('data.email', 'fatima.javed@company.pk')
         ->assertJsonPath('data.work_mode', 'hybrid')
-        ->assertJsonPath('data.status', 'active')
+        ->assertJsonPath('data.employment_status.name', 'Active')
         ->assertJsonPath('data.join_date', '2024-03-12')
         ->assertJsonStructure(['data' => ['reports_to', 'direct_reports', 'employment', 'attendance_rate', 'leave_balances']]);
 
@@ -80,7 +80,7 @@ it('rolls everything back when a step fails halfway', function () {
 it('requires the mandatory fields', function () {
     $this->postJson('/api/v1/employees', [])
         ->assertStatus(422)
-        ->assertJsonValidationErrors(['first_name', 'last_name', 'email', 'cnic', 'designation_id', 'department_id', 'status', 'duty_type', 'join_date'])
+        ->assertJsonValidationErrors(['first_name', 'last_name', 'email', 'cnic', 'designation_id', 'department_id', 'employment_status_id', 'duty_type', 'join_date'])
         ->assertJsonMissingValidationErrors(['gross_salary']);
 });
 

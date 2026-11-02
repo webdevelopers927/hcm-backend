@@ -35,6 +35,7 @@ class EmployeeDetailResource extends JsonResource
 
         return [
             'createdBy:id,name',
+            'employmentStatus:id,name,can_login,is_notice_period',
             'country:id,name,iso2,phone_code',
             'state:id,name',
             'city:id,name',
@@ -107,7 +108,8 @@ class EmployeeDetailResource extends JsonResource
             'shift_id' => $e->shift_id,
             'location_id' => $e->location_id,
             'work_mode' => $enum($e->work_mode),
-            'status' => $enum($e->status),
+            'employment_status_id' => $e->employment_status_id,
+            'employment_status' => $e->employmentStatus?->toRef(),
             'duty_type' => $enum($e->duty_type),
             'join_date' => $date($e->join_date),
             'probation_start_date' => $date($e->probation_start_date),

@@ -83,7 +83,7 @@ it('imports every row like a single create: employee, user and invite', function
         ->and($ali->department->name)->toBe('Engineering')
         ->and($ali->designation->name)->toBe('Software Engineer')
         ->and($ali->work_mode->value)->toBe('hybrid')
-        ->and($ali->status->value)->toBe('on_leave')
+        ->and($ali->employmentStatus()->value('name'))->toBe('On leave')
         ->and($ali->duty_type->value)->toBe('full_time')
         ->and($ali->is_draft)->toBeFalse()
         ->and($ali->shift->name)->toBe('Morning')

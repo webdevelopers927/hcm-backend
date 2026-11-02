@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Enums\DutyType;
-use App\Enums\EmployeeStatus;
 use App\Enums\Gender;
 use App\Enums\WorkMode;
 use App\Models\Campaign;
@@ -11,6 +10,7 @@ use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Division;
 use App\Models\Employee;
+use App\Models\EmploymentStatus;
 use App\Models\Location;
 use App\Models\Shift;
 use App\Models\User;
@@ -66,16 +66,28 @@ class EmployeeFactory extends Factory
             'shift_id' => Shift::query()->inRandomOrder()->value('id'),
             'location_id' => Location::query()->inRandomOrder()->value('id'),
             'work_mode' => fake()->randomElement([WorkMode::Onsite, WorkMode::Onsite, WorkMode::Hybrid, WorkMode::Hybrid, WorkMode::Remote]),
-            'status' => fake()->randomElement([
-                ...array_fill(0, 13, EmployeeStatus::Active),
-                ...array_fill(0, 3, EmployeeStatus::Probation),
-                ...array_fill(0, 2, EmployeeStatus::OnLeave),
-                EmployeeStatus::NoticePeriod,
-                EmployeeStatus::Inactive,
-            ]),
+            'employment_status_id' => self::statusId(fake()->randomElement([
+                ...array_fill(0, 13, 'Active'),
+                ...array_fill(0, 3, 'Probation'),
+                ...array_fill(0, 2, 'On leave'),
+                'Notice period',
+                'Inactive',
+            ])),
             'join_date' => fake()->dateTimeBetween('-6 years', '-1 week')->format('Y-m-d'),
             'duty_type' => fake()->randomElement([...array_fill(0, 8, DutyType::FullTime), DutyType::Contract, DutyType::PartTime]),
         ];
+    }
+
+    /** In the employment status with this name (seeded by LookupSeeder). */
+    public function inStatus(string $name): static
+    {
+        return $this->state(fn () => ['employment_status_id' => self::statusId($name)]);
+    }
+
+    /** Not cached: test runs roll back and re-seed, and MySQL does not reuse auto-increment ids. */
+    public static function statusId(string $name): ?int
+    {
+        return EmploymentStatus::query()->where('name', $name)->value('id');
     }
 
     /** Can have people reporting to them. */
@@ -89,7 +101,7 @@ class EmployeeFactory extends Factory
     {
         return $this->state(fn () => [
             'is_draft' => true,
-            'status' => null,
+            'employment_status_id' => null,
             'duty_type' => null,
             'cnic' => null,
             'join_date' => null,

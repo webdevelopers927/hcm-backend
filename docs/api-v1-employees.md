@@ -12,6 +12,13 @@ on every endpoint except login, `Authorization: Bearer <token>`.
 > Salary and bank details are **not part of the Employees module**. They will be added with the payroll
 > module (an employee can have no salary, e.g. an intern).
 
+> **Changed (2026-11-03): employment status.** The captured examples below still show the old
+> `"status": "active"` string and old `status_counts` keys. Statuses are now a managed list: responses carry
+> `employment_status: { id, name, can_login, is_notice_period }`, payloads send `employment_status_id`, the
+> list filters by `employment_status_id[]` / `on_notice`, and `status_counts` is
+> `{ all, on_notice, by_status: { "<id>": count } }`. Full mapping:
+> [api-v1-employment-statuses.md](api-v1-employment-statuses.md).
+
 ## Conventions
 
 | Topic | Rule |
@@ -19,7 +26,7 @@ on every endpoint except login, `Authorization: Bearer <token>`.
 | JSON keys | `snake_case` |
 | Dates | `YYYY-MM-DD` (e.g. `join_date`) |
 | Timestamps | ISO 8601 (e.g. `bound_at: "2026-08-14T20:35:47+00:00"`) |
-| Array query params | `status[]=active&status[]=probation` (comma-separated `status=active,probation` also works) |
+| Array query params | `employment_status_id[]=1&employment_status_id[]=2` (comma-separated `employment_status_id=1,2` also works) |
 | Single resources | wrapped in `data` |
 
 ### Errors
@@ -167,14 +174,15 @@ Using the same token afterwards:
 | Param | Type | Notes |
 |---|---|---|
 | `search` | string ≤100 | matches first/last/full name, pseudo name, email, code, machine_uid, designation name; `%` and `_` are matched literally |
-| `status[]` | `active` `probation` `on_leave` `notice_period` `inactive` | |
+| `employment_status_id[]` | status ids from `/employment-statuses` | |
+| `on_notice` | `1` | everyone in a notice-period status |
 | `work_mode[]` | `onsite` `hybrid` `remote` | |
 | `department_id[]` `designation_id[]` `division_id[]` `campaign_id[]` `shift_id[]` `location_id[]` | int | |
 | `sort` | `name` (default) `-name` `join_date` `-join_date` `department` `-department` `code` `-code` | `-` = descending; id is the tie-breaker |
 | `page` | int ≥1 | |
 | `per_page` | int ≥1 | default 12; values above 100 are **clamped** to 100 |
 
-`status_counts` applies **every filter except `status`**, so the status tabs show correct numbers.
+`status_counts` (`{ all, on_notice, by_status: { "<status id>": count } }`) applies **every filter except the status ones**, so the status tabs show correct numbers.
 The list never contains CNIC, phone or birth date. `can` is computed per row from the
 current user's policy.
 
@@ -669,7 +677,7 @@ One-shot hire. Accepts **every field of the employee form** (see
 [api-v1-employee-form.md](api-v1-employee-form.md), which also covers saving the form as a draft first).
 Required ("core set"): `first_name`, `last_name`, `email` (business email, unique across employees, including
 deleted ones, and users), `cnic` (`^\d{5}-\d{7}-\d$`, unique via a blind index), `department_id`,
-`designation_id`, `status` (employment status), `duty_type`, `join_date`; plus the conditional rules
+`designation_id`, `employment_status_id`, `duty_type`, `join_date`; plus the conditional rules
 (remote access dates, work experience fields). Unknown fields (e.g. `gross_salary`) are ignored.
 
 In one transaction it creates the employee (code `EMP-NNNN` derived from the id) and a linked user. After commit it queues
@@ -957,12 +965,12 @@ Nothing bound: `422`
 ```
 
 ### `POST /employees/export`
-Body: the list filters (`search`, `status`, `department_id`, … as arrays), `sort`, optional `ids` (export only
+Body: the list filters (`search`, `employment_status_id`, `on_notice`, `department_id`, … as arrays), `sort`, optional `ids` (export only
 those rows) and `format` (`csv` | `xlsx`, required). The file is streamed. Columns: code, name, email,
 designation, department, status, work mode, shift, location, join date. **No PII.** CSV cells that start
 with `= + - @` are prefixed with `'` to block formula injection.
 
-Request: `{"format":"csv","status":["active"],"department_id":[1],"sort":"name"}`
+Request: `{"format":"csv","employment_status_id":[1],"department_id":[1],"sort":"name"}`
 
 Response headers:
 ```http

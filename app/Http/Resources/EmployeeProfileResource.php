@@ -27,6 +27,7 @@ class EmployeeProfileResource extends EmployeeListResource
             'campaign:id,name',
             'location:id,name',
             'user:id,two_factor_enabled',
+            'employmentStatus:id,name,can_login,is_notice_period',
             'activeDevice',
             'reportsTo:id,first_name,middle_name,last_name,avatar_path,designation_id',
             'reportsTo.designation:id,name',
@@ -54,7 +55,7 @@ class EmployeeProfileResource extends EmployeeListResource
             'direct_reports' => EmployeeSummaryResource::collection($employee->directReports),
             'employment' => [
                 'join_date' => $employee->join_date?->toDateString(),
-                'status' => $employee->status?->value,
+                'employment_status' => $employee->employmentStatus?->toRef(),
             ],
             // Placeholders until the attendance and leave modules exist; keys kept for a stable contract.
             'attendance_rate' => null,

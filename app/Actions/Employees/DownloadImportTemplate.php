@@ -3,6 +3,7 @@
 namespace App\Actions\Employees;
 
 use App\Models\Department;
+use App\Models\EmploymentStatus;
 use App\Models\Location;
 use App\Models\Shift;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -36,7 +37,7 @@ class DownloadImportTemplate
             'reports_to' => '',
             'has_team_authority' => 'no',
             'work_mode' => 'onsite',
-            'status' => 'probation',
+            'status' => EmploymentStatus::query()->orderBy('sort_order')->value('name') ?? '',
             'duty_type' => 'full_time',
             'join_date' => now()->toDateString(),
         ];

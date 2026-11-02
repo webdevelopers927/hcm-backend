@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\EmployeeStatus;
 use App\Enums\WorkMode;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
@@ -10,6 +9,7 @@ use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Division;
 use App\Models\Employee;
+use App\Models\EmploymentStatus;
 use App\Models\Location;
 use App\Models\Shift;
 use Illuminate\Http\JsonResponse;
@@ -37,10 +37,7 @@ class EmployeeFilterController extends Controller
                     'end' => Shift::hhmm($s->end_time),
                 ]),
             'locations' => Location::query()->orderBy('name')->get(['id', 'name']),
-            'statuses' => array_map(
-                fn (EmployeeStatus $s) => ['value' => $s->value, 'label' => $s->label()],
-                EmployeeStatus::cases(),
-            ),
+            'employment_statuses' => EmploymentStatus::options(),
             'work_modes' => array_map(
                 fn (WorkMode $m) => ['value' => $m->value, 'label' => $m->label()],
                 WorkMode::cases(),

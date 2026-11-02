@@ -22,7 +22,7 @@ beforeEach(function () {
         'cnic' => '35202-7777777-7',
         'department_id' => $designation->department_id,
         'designation_id' => $designation->id,
-        'status' => 'probation',
+        'employment_status_id' => statusId('Probation'),
         'duty_type' => 'internship',
         'join_date' => '2026-11-10',
     ];
@@ -92,7 +92,7 @@ it('refuses to submit an incomplete draft and lists what is missing', function (
 
     $this->postJson("/api/v1/employees/{$draft->id}/submit")
         ->assertStatus(422)
-        ->assertJsonValidationErrors(['cnic', 'status', 'duty_type', 'join_date'])
+        ->assertJsonValidationErrors(['cnic', 'employment_status_id', 'duty_type', 'join_date'])
         ->assertJsonPath('errors.duty_type.0', 'The duty type field is required.');
 
     expect($draft->fresh()->is_draft)->toBeTrue()->and(User::count())->toBe(1);
@@ -106,7 +106,7 @@ it('submits a complete draft: code, login account, invite and audit entry', func
         ->assertOk()
         ->assertJsonPath('data.id', $id)
         ->assertJsonPath('data.code', sprintf('EMP-%04d', $id))
-        ->assertJsonPath('data.status', 'probation');
+        ->assertJsonPath('data.employment_status.name', 'Probation');
 
     $employee = Employee::findOrFail($id);
     expect($employee->is_draft)->toBeFalse()

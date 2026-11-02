@@ -6,6 +6,7 @@ use App\Models\Campaign;
 use App\Models\DegreeProgram;
 use App\Models\Department;
 use App\Models\Division;
+use App\Models\EmploymentStatus;
 use App\Models\Location;
 use App\Models\ProbationDuration;
 use App\Models\Shift;
@@ -26,6 +27,20 @@ class LookupSeeder extends Seeder
     ];
 
     public const PROBATION_MONTHS = [1, 2, 3, 6, 12];
+
+    /** Name => [can log in, is a notice period], in display order. */
+    public const EMPLOYMENT_STATUSES = [
+        'Active' => [true, false],
+        'Probation' => [true, false],
+        'On leave' => [true, false],
+        'Notice period' => [true, true],
+        'Serving notice (terminated)' => [true, true],
+        'Suspended' => [false, false],
+        'Resigned' => [false, false],
+        'Terminated' => [false, false],
+        'Retired' => [false, false],
+        'Inactive' => [false, false],
+    ];
 
     public const DEGREE_PROGRAMS = [
         'Matriculation', 'O Levels', 'Intermediate (FA)', 'Intermediate (FSc)', 'Intermediate (ICS)',
@@ -75,6 +90,16 @@ class LookupSeeder extends Seeder
 
         foreach (self::DEGREE_PROGRAMS as $name) {
             DegreeProgram::query()->firstOrCreate(['name' => $name]);
+        }
+
+        // firstOrCreate: never overwrite flags an admin has changed since.
+        $order = 0;
+        foreach (self::EMPLOYMENT_STATUSES as $name => [$canLogin, $notice]) {
+            EmploymentStatus::query()->firstOrCreate(
+                ['name' => $name],
+                ['can_login' => $canLogin, 'is_notice_period' => $notice, 'sort_order' => $order],
+            );
+            $order++;
         }
     }
 }

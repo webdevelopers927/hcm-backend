@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\BloodGroup;
 use App\Enums\DutyType;
 use App\Enums\EmergencyContactRelation;
-use App\Enums\EmployeeStatus;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
 use App\Enums\Religion;
@@ -18,6 +17,7 @@ use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Division;
 use App\Models\Employee;
+use App\Models\EmploymentStatus;
 use App\Models\Location;
 use App\Models\ProbationDuration;
 use App\Models\Shift;
@@ -42,7 +42,7 @@ class EmployeeFormOptionsController extends Controller
             'marital_statuses' => MaritalStatus::options(),
             'religions' => Religion::options(),
             'blood_groups' => BloodGroup::options(),
-            'employment_statuses' => array_map(fn (EmployeeStatus $s) => $option($s->value, $s->label()), EmployeeStatus::cases()),
+            'employment_statuses' => EmploymentStatus::options(),
             'duty_types' => DutyType::options(),
             'work_modes' => array_map(fn (WorkMode $m) => $option($m->value, $m->label()), WorkMode::cases()),
             'emergency_contact_relations' => EmergencyContactRelation::options(),

@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Division;
 use App\Models\Employee;
+use App\Models\EmploymentStatus;
 use App\Models\Location;
 use App\Models\Shift;
 use App\Models\User;
@@ -41,6 +42,7 @@ class ImportEmployees
     private const ID_COLUMNS = [
         'department_id' => 'department', 'designation_id' => 'designation', 'division_id' => 'division',
         'campaign_id' => 'campaign', 'shift_id' => 'shift', 'location_id' => 'location', 'reports_to_id' => 'reports_to',
+        'employment_status_id' => 'status',
     ];
 
     /** @var array<string, array<string, int>> lookup table => lowercase name => id */
@@ -261,7 +263,6 @@ class ImportEmployees
             'pseudo_name' => $value('pseudo_name'),
             'machine_uid' => $value('machine_uid'),
             'work_mode' => $enum('work_mode'),
-            'status' => $enum('status'),
             'duty_type' => $enum('duty_type'),
             'has_team_authority' => self::yesNo($value('has_team_authority')),
             'join_date' => self::excelDate($value('join_date')),
@@ -281,6 +282,11 @@ class ImportEmployees
         foreach (['division' => 'divisions', 'campaign' => 'campaigns', 'shift' => 'shifts', 'location' => 'locations'] as $column => $table) {
             $data[$column.'_id'] = $this->lookup($table, $value($column), $errors, $column);
         }
+
+        // Employment status by name ("On leave"; "on_leave" from older templates also matches).
+        $status = $value('status');
+        $data['employment_status_id'] = $this->lookup('employment_statuses', $status === null ? null : str_replace('_', ' ', $status), $errors, 'status',
+            $status === null ? null : "Employment status \"{$status}\" does not exist.");
 
         // reports_to: an existing employee's code or email, or the email of another row in this file.
         $managerEmail = null;
@@ -359,6 +365,7 @@ class ImportEmployees
             $table === 'divisions' => Division::query()->get(['id', 'name']),
             $table === 'campaigns' => Campaign::query()->get(['id', 'name']),
             $table === 'shifts' => Shift::query()->get(['id', 'name']),
+            $table === 'employment_statuses' => EmploymentStatus::query()->get(['id', 'name']),
             default => Location::query()->get(['id', 'name']),
         };
 

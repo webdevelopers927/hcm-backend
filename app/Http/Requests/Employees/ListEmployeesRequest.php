@@ -3,16 +3,15 @@
 namespace App\Http\Requests\Employees;
 
 use App\Actions\Employees\BuildEmployeeQuery;
-use App\Enums\EmployeeStatus;
 use App\Enums\WorkMode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class ListEmployeesRequest extends FormRequest
 {
-    /** Array filters; a scalar (?status=active) is accepted and wrapped. */
+    /** Array filters; a scalar (?employment_status_id=1,2) is accepted and wrapped. */
     protected const ARRAY_FILTERS = [
-        'status', 'department_id', 'designation_id', 'division_id', 'campaign_id', 'shift_id', 'location_id', 'work_mode',
+        'employment_status_id', 'department_id', 'designation_id', 'division_id', 'campaign_id', 'shift_id', 'location_id', 'work_mode',
     ];
 
     public function authorize(): bool
@@ -38,8 +37,9 @@ class ListEmployeesRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:100'],
-            'status' => ['sometimes', 'array'],
-            'status.*' => [Rule::in(EmployeeStatus::values())],
+            'employment_status_id' => ['sometimes', 'array'],
+            'employment_status_id.*' => ['integer'],
+            'on_notice' => ['nullable', 'boolean'],
             'work_mode' => ['sometimes', 'array'],
             'work_mode.*' => [Rule::in(WorkMode::values())],
             'department_id' => ['sometimes', 'array'],

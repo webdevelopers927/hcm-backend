@@ -69,4 +69,10 @@ class EmployeePolicy
     {
         return true;
     }
+
+    /** Change or schedule shifts (Shift records page). */
+    public function assignShift(User $user): bool
+    {
+        return true;
+    }
 }
