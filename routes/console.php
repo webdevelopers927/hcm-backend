@@ -15,3 +15,6 @@ Schedule::command('uploads:prune')->hourly();
 
 // Shift changes scheduled for today (or missed while the scheduler was down).
 Schedule::command('shifts:apply-scheduled')->dailyAt('00:05');
+
+// Offboarded employees leave the day after their last working day.
+Schedule::command('offboarding:process-exits')->dailyAt('00:10');

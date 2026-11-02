@@ -76,6 +76,9 @@ use Illuminate\Support\Facades\Storage;
  * @property int|null $probation_duration_id
  * @property Carbon|null $confirmation_date
  * @property Carbon|null $separation_date
+ * @property Carbon|null $resigned_date
+ * @property Carbon|null $last_working_day
+ * @property string|null $reason_for_resignation
  * @property bool $has_team_authority
  * @property bool $remote_access
  * @property bool $permanent_remote_access
@@ -108,6 +111,7 @@ class Employee extends Model
         'designation_id', 'department_id', 'division_id', 'campaign_id', 'shift_id', 'location_id',
         'reports_to_id', 'indirect_reports_to_id', 'work_mode', 'employment_status_id', 'duty_type', 'join_date',
         'probation_start_date', 'probation_duration_id', 'confirmation_date', 'separation_date',
+        'resigned_date', 'last_working_day', 'reason_for_resignation',
         'has_team_authority', 'remote_access', 'permanent_remote_access', 'remote_access_from', 'remote_access_until',
         'phone', 'secondary_phone', 'landline', 'permanent_address', 'present_address',
         'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relation',
@@ -169,6 +173,8 @@ class Employee extends Model
             'probation_start_date' => 'date',
             'confirmation_date' => 'date',
             'separation_date' => 'date',
+            'resigned_date' => 'date',
+            'last_working_day' => 'date',
             'remote_access_from' => 'date',
             'remote_access_until' => 'date',
             'passport_expiry' => 'date',
@@ -436,6 +442,37 @@ class Employee extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(EmployeeDocument::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<Offboarding, $this>
+     */
+    public function offboardings(): HasMany
+    {
+        return $this->hasMany(Offboarding::class);
+    }
+
+    /**
+     * The case still in progress, if any.
+     *
+     * @return HasOne<Offboarding, $this>
+     */
+    public function openOffboarding(): HasOne
+    {
+        return $this->hasOne(Offboarding::class)->whereNull('completed_at');
+    }
+
+    /** Whether this employee's employment status is a notice period. */
+    public function onNotice(): bool
+    {
+        return $this->employment_status_id !== null
+            && (bool) EmploymentStatus::query()->whereKey($this->employment_status_id)->value('is_notice_period');
+    }
+
+    /** Whether this employee's employment status means they have left (resigned, terminated…). */
+    public function hasExited(): bool
+    {
+        return EmploymentStatus::isExitId($this->employment_status_id);
     }
 
     /**

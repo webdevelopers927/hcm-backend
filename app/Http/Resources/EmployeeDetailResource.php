@@ -35,7 +35,8 @@ class EmployeeDetailResource extends JsonResource
 
         return [
             'createdBy:id,name',
-            'employmentStatus:id,name,can_login,is_notice_period',
+            'employmentStatus:id,name,can_login,is_notice_period,is_exit',
+            'openOffboarding:id,employee_id,exit_type,stage,completed_at',
             'country:id,name,iso2,phone_code',
             'state:id,name',
             'city:id,name',
@@ -117,6 +118,15 @@ class EmployeeDetailResource extends JsonResource
             'probation_end_date' => $date($e->probationEndDate()),
             'confirmation_date' => $date($e->confirmation_date),
             'separation_date' => $date($e->separation_date),
+            // Exit details; required while the employment status is a notice period.
+            'resigned_date' => $date($e->resigned_date),
+            'last_working_day' => $date($e->last_working_day),
+            'reason_for_resignation' => $e->reason_for_resignation,
+            'offboarding' => $e->openOffboarding ? [
+                'id' => $e->openOffboarding->id,
+                'exit_type' => $e->openOffboarding->exit_type->value,
+                'stage' => $e->openOffboarding->stage->value,
+            ] : null,
             'reports_to_id' => $e->reports_to_id,
             'reports_to' => $e->reportsTo ? new EmployeeSummaryResource($e->reportsTo) : null,
             'indirect_reports_to_id' => $e->indirect_reports_to_id,
@@ -204,7 +214,7 @@ class EmployeeDetailResource extends JsonResource
             ])->all(),
 
             // What still blocks submitting a draft (always complete for a real employee).
-            'missing_fields' => $e->is_draft ? (new EmployeeCompleteness)->errors(EmployeeCompleteness::data($e)) : (object) [],
+            'missing_fields' => $e->is_draft ? (new EmployeeCompleteness)->errors([...EmployeeCompleteness::data($e), 'entering_exit' => $e->hasExited()]) : (object) [],
         ];
     }
 

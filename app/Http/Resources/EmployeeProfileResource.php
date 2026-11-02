@@ -27,7 +27,7 @@ class EmployeeProfileResource extends EmployeeListResource
             'campaign:id,name',
             'location:id,name',
             'user:id,two_factor_enabled',
-            'employmentStatus:id,name,can_login,is_notice_period',
+            'employmentStatus:id,name,can_login,is_notice_period,is_exit',
             'activeDevice',
             'reportsTo:id,first_name,middle_name,last_name,avatar_path,designation_id',
             'reportsTo.designation:id,name',

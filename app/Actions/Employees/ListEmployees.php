@@ -64,7 +64,7 @@ class ListEmployees
             'campaign:id,name',
             'location:id,name',
             'user:id,two_factor_enabled',
-            'employmentStatus:id,name,can_login,is_notice_period',
+            'employmentStatus:id,name,can_login,is_notice_period,is_exit',
         ];
     }
 }

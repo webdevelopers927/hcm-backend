@@ -28,18 +28,18 @@ class LookupSeeder extends Seeder
 
     public const PROBATION_MONTHS = [1, 2, 3, 6, 12];
 
-    /** Name => [can log in, is a notice period], in display order. */
+    /** Name => [can log in, is a notice period, ends employment], in display order. */
     public const EMPLOYMENT_STATUSES = [
-        'Active' => [true, false],
-        'Probation' => [true, false],
-        'On leave' => [true, false],
-        'Notice period' => [true, true],
-        'Serving notice (terminated)' => [true, true],
-        'Suspended' => [false, false],
-        'Resigned' => [false, false],
-        'Terminated' => [false, false],
-        'Retired' => [false, false],
-        'Inactive' => [false, false],
+        'Active' => [true, false, false],
+        'Probation' => [true, false, false],
+        'On leave' => [true, false, false],
+        'Notice period' => [true, true, false],
+        'Serving notice (terminated)' => [true, true, false],
+        'Suspended' => [false, false, false],
+        'Resigned' => [false, false, true],
+        'Terminated' => [false, false, true],
+        'Retired' => [false, false, true],
+        'Inactive' => [false, false, true],
     ];
 
     public const DEGREE_PROGRAMS = [
@@ -94,10 +94,10 @@ class LookupSeeder extends Seeder
 
         // firstOrCreate: never overwrite flags an admin has changed since.
         $order = 0;
-        foreach (self::EMPLOYMENT_STATUSES as $name => [$canLogin, $notice]) {
+        foreach (self::EMPLOYMENT_STATUSES as $name => [$canLogin, $notice, $exit]) {
             EmploymentStatus::query()->firstOrCreate(
                 ['name' => $name],
-                ['can_login' => $canLogin, 'is_notice_period' => $notice, 'sort_order' => $order],
+                ['can_login' => $canLogin, 'is_notice_period' => $notice, 'is_exit' => $exit, 'sort_order' => $order],
             );
             $order++;
         }

@@ -27,7 +27,7 @@ class SubmitEmployeeDraft
                 throw new ConflictHttpException('This draft has already been submitted.');
             }
 
-            $this->completeness->assertComplete($draft);
+            $this->completeness->assertComplete($draft, enteringExit: $draft->hasExited());
             $user = $this->createEmployee->finalize($draft);
 
             activity('employees')

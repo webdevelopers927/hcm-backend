@@ -81,9 +81,9 @@ it('signs an employee out when they move to a status that may not log in', funct
     $this->patchJson("/api/v1/employees/{$employee->id}", ['employment_status_id' => statusId('Probation')])->assertOk();
     expect($employee->user->tokens()->count())->toBe(1);
 
-    $this->patchJson("/api/v1/employees/{$employee->id}", ['employment_status_id' => statusId('Terminated')])
+    $this->patchJson("/api/v1/employees/{$employee->id}", ['employment_status_id' => statusId('Suspended')])
         ->assertOk()
-        ->assertJsonPath('data.employment_status.name', 'Terminated');
+        ->assertJsonPath('data.employment_status.name', 'Suspended');
     expect($employee->user->tokens()->count())->toBe(0);
 });
 
@@ -107,7 +107,7 @@ it('skips the invite email for a hire whose status may not log in', function () 
     $this->postJson('/api/v1/employees', [
         'first_name' => 'No', 'last_name' => 'Login', 'email' => 'no.login@company.pk', 'cnic' => '35202-4444444-4',
         'department_id' => $designation->department_id, 'designation_id' => $designation->id,
-        'employment_status_id' => statusId('Inactive'), 'duty_type' => 'full_time', 'join_date' => '2026-10-01',
+        'employment_status_id' => statusId('Suspended'), 'duty_type' => 'full_time', 'join_date' => '2026-10-01',
     ])->assertCreated();
 
     Mail::assertNotQueued(EmployeeInvitation::class);
@@ -118,4 +118,17 @@ it('requires an existing status on the employee form', function () {
 
     $this->patchJson("/api/v1/employees/{$draft->id}", ['employment_status_id' => 999999])
         ->assertStatus(422)->assertJsonValidationErrors(['employment_status_id']);
+});
+
+it('flags statuses that end employment, and not together with a notice period', function () {
+    $this->getJson('/api/v1/employment-statuses')
+        ->assertJsonPath('data', fn ($rows) => collect($rows)->where('is_exit', true)->pluck('name')->sort()->values()->all()
+            === ['Inactive', 'Resigned', 'Retired', 'Terminated']);
+
+    $this->postJson('/api/v1/employment-statuses', ['name' => 'Odd', 'can_login' => false, 'is_notice_period' => true, 'is_exit' => true])
+        ->assertStatus(422)->assertJsonValidationErrors(['is_exit']);
+    $this->patchJson('/api/v1/employment-statuses/'.statusId('Notice period'), ['is_exit' => true])
+        ->assertStatus(422)->assertJsonValidationErrors(['is_exit']);
+    $this->postJson('/api/v1/employment-statuses', ['name' => 'Laid off', 'can_login' => false, 'is_notice_period' => false, 'is_exit' => true])
+        ->assertCreated()->assertJsonPath('data.is_exit', true);
 });

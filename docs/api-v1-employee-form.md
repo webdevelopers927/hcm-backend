@@ -97,6 +97,7 @@ All optional on a draft. `PATCH` changes only the keys you send; `null` clears a
 | `probation_start_date` | date, not before `join_date` |
 | `probation_duration_id` | id from `form-options.probation_durations`; the response adds `probation_end_date` |
 | `confirmation_date`, `separation_date` | dates, not before `join_date` |
+| `resigned_date`, `last_working_day`, `reason_for_resignation` | **required while the employment status is a notice period**; last working day ≥ resigned date ≥ join date. See [api-v1-offboarding.md](api-v1-offboarding.md) |
 | `reports_to_id`, `indirect_reports_to_id` | a real employee **with team authority**; not self; not the same person twice; no reporting cycles |
 | `has_team_authority` | boolean. Can't be turned off while anyone reports to this person |
 | `remote_access` | boolean. Turning it off clears the three fields below |

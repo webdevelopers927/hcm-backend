@@ -8,6 +8,7 @@ use App\Models\EmployeeChild;
 use App\Models\EmployeeQualification;
 use App\Models\EmployeeSpouse;
 use App\Models\EmployeeWorkExperience;
+use App\Models\EmploymentStatus;
 use BackedEnum;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -32,6 +33,11 @@ class EmployeeCompleteness
     {
         $whenExperienced = 'required_if_accepted:has_work_experience';
         $flag = fn (string $key) => filter_var($data[$key] ?? false, FILTER_VALIDATE_BOOL);
+        $statusId = $data['employment_status_id'] ?? null;
+        // Exit details are needed while serving notice, and when someone is moved into a status that
+        // ends employment (`entering_exit`; not for people who were already there before these fields existed).
+        $needsExitDetails = $flag('entering_exit') || (is_numeric($statusId)
+            && (bool) EmploymentStatus::query()->whereKey((int) $statusId)->value('is_notice_period'));
 
         return [
             'first_name' => ['required'],
@@ -43,6 +49,10 @@ class EmployeeCompleteness
             'employment_status_id' => ['required'],
             'duty_type' => ['required'],
             'join_date' => ['required'],
+
+            'resigned_date' => [Rule::requiredIf($needsExitDetails)],
+            'last_working_day' => [Rule::requiredIf($needsExitDetails)],
+            'reason_for_resignation' => [Rule::requiredIf($needsExitDetails)],
 
             'remote_access_from' => ['required_if_accepted:remote_access'],
             // Permanent remote access has no end date.
@@ -100,12 +110,14 @@ class EmployeeCompleteness
     }
 
     /**
+     * @param  bool  $enteringExit  the employee is being moved into (or created in) a status that ends employment
+     *
      * @throws ValidationException listing every missing field
      */
-    public function assertComplete(Employee $employee): void
+    public function assertComplete(Employee $employee, bool $enteringExit = false): void
     {
         $employee->load(self::RELATIONS);
-        $errors = $this->errors(self::data($employee));
+        $errors = $this->errors([...self::data($employee), 'entering_exit' => $enteringExit]);
 
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -122,7 +134,7 @@ class EmployeeCompleteness
         $data = [];
         foreach (['first_name', 'last_name', 'email', 'cnic', 'department_id', 'designation_id', 'employment_status_id', 'duty_type',
             'join_date', 'remote_access', 'permanent_remote_access', 'remote_access_from', 'remote_access_until',
-            'has_work_experience'] as $key) {
+            'has_work_experience', 'resigned_date', 'last_working_day', 'reason_for_resignation'] as $key) {
             $value = $employee->getAttribute($key);
             $data[$key] = $value instanceof BackedEnum ? $value->value : $value;
         }

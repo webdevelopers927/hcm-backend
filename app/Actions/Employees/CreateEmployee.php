@@ -2,6 +2,7 @@
 
 namespace App\Actions\Employees;
 
+use App\Actions\Offboarding\OffboardingWorkflow;
 use App\Actions\Shifts\AssignShift;
 use App\Mail\EmployeeInvitation;
 use App\Models\Employee;
@@ -19,6 +20,7 @@ class CreateEmployee
         private readonly SaveEmployee $save,
         private readonly EmployeeCompleteness $completeness,
         private readonly AssignShift $assignShift,
+        private readonly OffboardingWorkflow $offboarding,
     ) {}
 
     /**
@@ -36,7 +38,7 @@ class CreateEmployee
 
             $user = null;
             if (! $asDraft) {
-                $this->completeness->assertComplete($employee);
+                $this->completeness->assertComplete($employee, enteringExit: $employee->hasExited());
                 $user = $this->finalize($employee);
             }
 
@@ -97,6 +99,9 @@ class CreateEmployee
                 $employee->created_by_id, alreadyApplied: true,
             );
         }
+
+        // Hired straight into a notice period or an exit status (e.g. back-filling records): open the case too.
+        $this->offboarding->syncWithStatus($employee, null, null);
 
         return $user;
     }

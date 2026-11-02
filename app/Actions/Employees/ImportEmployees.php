@@ -35,7 +35,7 @@ class ImportEmployees
     public const COLUMNS = [
         'first_name', 'last_name', 'email', 'phone', 'cnic', 'gender', 'birth_date', 'pseudo_name', 'machine_uid',
         'department', 'designation', 'division', 'campaign', 'shift', 'location', 'reports_to', 'has_team_authority',
-        'work_mode', 'status', 'duty_type', 'join_date',
+        'work_mode', 'status', 'duty_type', 'join_date', 'resigned_date', 'last_working_day', 'reason_for_resignation',
     ];
 
     /** Validated id field => spreadsheet column, so errors point at the column the user typed. */
@@ -151,7 +151,9 @@ class ImportEmployees
 
             // Same field rules as POST /employees, plus everything a complete employee needs.
             $rowRules = $rules;
-            foreach (EmployeeCompleteness::rules($data) as $field => $required) {
+            // A new employee created in a status that ends employment is "entering" it.
+            $completeness = [...$data, 'entering_exit' => EmploymentStatus::isExitId($data['employment_status_id'] ?? null)];
+            foreach (EmployeeCompleteness::rules($completeness) as $field => $required) {
                 $rowRules[$field] = [...$required, ...($rowRules[$field] ?? [])];
             }
             $validator = Validator::make($data, $rowRules, EmployeeCompleteness::messages(), $this->attributeNames());
@@ -266,6 +268,9 @@ class ImportEmployees
             'duty_type' => $enum('duty_type'),
             'has_team_authority' => self::yesNo($value('has_team_authority')),
             'join_date' => self::excelDate($value('join_date')),
+            'resigned_date' => self::excelDate($value('resigned_date')),
+            'last_working_day' => self::excelDate($value('last_working_day')),
+            'reason_for_resignation' => $value('reason_for_resignation'),
         ];
 
         $department = $value('department');

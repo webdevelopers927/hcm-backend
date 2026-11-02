@@ -9,7 +9,8 @@ with drafts, and reference data (countries/states/cities, divisions, degree prog
 API reference with real request/response examples: [docs/api-v1-employees.md](docs/api-v1-employees.md);
 the employee form, drafts, uploads and reference data: [docs/api-v1-employee-form.md](docs/api-v1-employee-form.md);
 shift records and shift history: [docs/api-v1-employee-shifts.md](docs/api-v1-employee-shifts.md);
-employment statuses: [docs/api-v1-employment-statuses.md](docs/api-v1-employment-statuses.md).
+employment statuses: [docs/api-v1-employment-statuses.md](docs/api-v1-employment-statuses.md);
+off-boarding: [docs/api-v1-offboarding.md](docs/api-v1-offboarding.md).
 
 ## Requirements
 
@@ -47,7 +48,7 @@ php artisan migrate --seed   # world geo data (~8 s), lookups, admin user, 64 de
 php artisan storage:link     # serves profile pictures from storage/app/public
 php artisan serve            # http://localhost:8000
 php artisan queue:work       # sends queued invite emails (QUEUE_CONNECTION=database)
-php artisan schedule:work    # dev: uploads:prune hourly, shifts:apply-scheduled daily (cron + schedule:run in production)
+php artisan schedule:work    # dev: uploads:prune hourly; shifts:apply-scheduled and offboarding:process-exits daily (cron + schedule:run in production)
 ```
 
 Get a token:

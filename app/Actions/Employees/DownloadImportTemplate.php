@@ -40,6 +40,9 @@ class DownloadImportTemplate
             'status' => EmploymentStatus::query()->orderBy('sort_order')->value('name') ?? '',
             'duty_type' => 'full_time',
             'join_date' => now()->toDateString(),
+            'resigned_date' => '',
+            'last_working_day' => '',
+            'reason_for_resignation' => '',
         ];
 
         $headers = array_map(

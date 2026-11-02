@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
@@ -89,7 +90,7 @@ class EmploymentStatusController extends Controller
     }
 
     /**
-     * @return array{name: string, can_login?: bool, is_notice_period?: bool, sort_order?: int}
+     * @return array{name: string, can_login?: bool, is_notice_period?: bool, is_exit?: bool, sort_order?: int}
      */
     private function validated(Request $request, ?EmploymentStatus $status): array
     {
@@ -99,13 +100,21 @@ class EmploymentStatusController extends Controller
 
         $present = $status ? 'sometimes' : 'required';
 
-        /** @var array{name: string, can_login?: bool, is_notice_period?: bool, sort_order?: int} $data */
+        /** @var array{name: string, can_login?: bool, is_notice_period?: bool, is_exit?: bool, sort_order?: int} $data */
         $data = $request->validate([
             'name' => [$present, 'string', 'max:100', Rule::unique('employment_statuses', 'name')->ignore($status?->id)],
             'can_login' => [$present, 'boolean'],
             'is_notice_period' => [$present, 'boolean'],
+            'is_exit' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:65535'],
-        ], [], ['can_login' => 'can log in', 'is_notice_period' => 'notice period']);
+        ], [], ['can_login' => 'can log in', 'is_notice_period' => 'notice period', 'is_exit' => 'ends employment']);
+
+        // Serving notice means still employed, so a status can't be both.
+        $notice = $data['is_notice_period'] ?? $status->is_notice_period ?? false;
+        $exit = $data['is_exit'] ?? $status->is_exit ?? false;
+        if ($notice && $exit) {
+            throw ValidationException::withMessages(['is_exit' => 'A status can\'t be both a notice period and end employment.']);
+        }
 
         return $data;
     }

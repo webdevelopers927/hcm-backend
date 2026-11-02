@@ -103,6 +103,10 @@ trait EmployeeRules
             'probation_duration_id' => ['nullable', 'integer', Rule::exists('probation_durations', 'id')],
             'confirmation_date' => $date,
             'separation_date' => $date,
+            // Exit details: required while the employment status is a notice period (EmployeeCompleteness).
+            'resigned_date' => $date,
+            'last_working_day' => $date,
+            'reason_for_resignation' => ['nullable', 'string', 'max:2000'],
             'has_team_authority' => ['nullable', 'boolean'],
             'remote_access' => ['nullable', 'boolean'],
             'permanent_remote_access' => ['nullable', 'boolean'],
@@ -194,6 +198,8 @@ trait EmployeeRules
         $this->assertDateOrder($errors, $value('confirmation_date'), $value('join_date'), 'confirmation_date', 'The date of confirmation cannot be before the date of joining.');
         $this->assertDateOrder($errors, $value('separation_date'), $value('join_date'), 'separation_date', 'The date of separation cannot be before the date of joining.');
         $this->assertDateOrder($errors, $value('probation_start_date'), $value('join_date'), 'probation_start_date', 'Probation cannot start before the date of joining.');
+        $this->assertDateOrder($errors, $value('last_working_day'), $value('resigned_date'), 'last_working_day', 'The last working day cannot be before the resigned date.');
+        $this->assertDateOrder($errors, $value('resigned_date'), $value('join_date'), 'resigned_date', 'The resigned date cannot be before the date of joining.');
 
         if ($flag('remote_access') && ! $flag('permanent_remote_access')) {
             $this->assertDateOrder($errors, $value('remote_access_until'), $value('remote_access_from'), 'remote_access_until', 'Remote access must end on or after the day it starts.');

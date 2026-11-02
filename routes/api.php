@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\EmployeeShiftController;
 use App\Http\Controllers\Api\V1\EmployeeTwoFactorController;
 use App\Http\Controllers\Api\V1\EmploymentStatusController;
 use App\Http\Controllers\Api\V1\GeoController;
+use App\Http\Controllers\Api\V1\OffboardingController;
 use App\Http\Controllers\Api\V1\UploadController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +40,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('employment-statuses', EmploymentStatusController::class);
 
     Route::post('uploads', [UploadController::class, 'store'])->middleware('throttle:uploads');
+
+    // Off-boarding
+    Route::apiResource('offboardings', OffboardingController::class);
+    Route::post('offboardings/{offboarding}/complete', [OffboardingController::class, 'complete']);
+    Route::post('offboardings/{offboarding}/checklist', [OffboardingController::class, 'addItem']);
+    Route::scopeBindings()->group(function () {
+        Route::patch('offboardings/{offboarding}/checklist/{item}', [OffboardingController::class, 'updateItem']);
+        Route::delete('offboardings/{offboarding}/checklist/{item}', [OffboardingController::class, 'removeItem']);
+    });
 
     // Shift records
     Route::get('employee-shifts', [EmployeeShiftController::class, 'index']);

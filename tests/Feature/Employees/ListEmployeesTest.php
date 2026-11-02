@@ -102,7 +102,7 @@ it('filters by employment status and work mode', function () {
 
     $this->getJson("/api/v1/employees?employment_status_id[]={$probation}")
         ->assertJsonPath('meta.total', 2)
-        ->assertJsonPath('data.0.employment_status', ['id' => $probation, 'name' => 'Probation', 'can_login' => true, 'is_notice_period' => false]);
+        ->assertJsonPath('data.0.employment_status', ['id' => $probation, 'name' => 'Probation', 'can_login' => true, 'is_notice_period' => false, 'is_exit' => false]);
     $this->getJson('/api/v1/employees?work_mode[]=onsite')->assertJsonPath('meta.total', 3);
     $this->getJson("/api/v1/employees?employment_status_id={$active},{$probation}")->assertJsonPath('meta.total', 5);
 });
