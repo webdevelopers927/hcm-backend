@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Employees;
 
 use App\Enums\BloodGroup;
-use App\Enums\DutyType;
 use App\Enums\EmergencyContactRelation;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
@@ -97,7 +96,7 @@ trait EmployeeRules
             'indirect_reports_to_id' => ['nullable', 'integer', $this->manager($employee), 'different:reports_to_id'],
             'work_mode' => ['nullable', Rule::enum(WorkMode::class)],
             'employment_status_id' => ['nullable', 'integer', Rule::exists('employment_statuses', 'id')],
-            'duty_type' => ['nullable', Rule::enum(DutyType::class)],
+            'duty_type_id' => ['nullable', 'integer', Rule::exists('duty_types', 'id')],
             'join_date' => $date,
             'probation_start_date' => $date,
             'probation_duration_id' => ['nullable', 'integer', Rule::exists('probation_durations', 'id')],

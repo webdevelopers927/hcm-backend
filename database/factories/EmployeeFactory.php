@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Enums\DutyType;
 use App\Enums\Gender;
 use App\Enums\WorkMode;
 use App\Models\Campaign;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Division;
+use App\Models\DutyType;
 use App\Models\Employee;
 use App\Models\EmploymentStatus;
 use App\Models\Location;
@@ -74,7 +74,7 @@ class EmployeeFactory extends Factory
                 'Inactive',
             ])),
             'join_date' => fake()->dateTimeBetween('-6 years', '-1 week')->format('Y-m-d'),
-            'duty_type' => fake()->randomElement([...array_fill(0, 8, DutyType::FullTime), DutyType::Contract, DutyType::PartTime]),
+            'duty_type_id' => self::dutyTypeId(fake()->randomElement([...array_fill(0, 8, 'Full-time'), 'Contract', 'Part-time'])),
         ];
     }
 
@@ -82,6 +82,12 @@ class EmployeeFactory extends Factory
     public function inStatus(string $name): static
     {
         return $this->state(fn () => ['employment_status_id' => self::statusId($name)]);
+    }
+
+    /** Seeded duty type by name ("Full-time", "Contract"…). Not cached, for the same reason as statusId(). */
+    public static function dutyTypeId(string $name): ?int
+    {
+        return DutyType::query()->where('name', $name)->value('id');
     }
 
     /** Not cached: test runs roll back and re-seed, and MySQL does not reuse auto-increment ids. */
@@ -102,7 +108,7 @@ class EmployeeFactory extends Factory
         return $this->state(fn () => [
             'is_draft' => true,
             'employment_status_id' => null,
-            'duty_type' => null,
+            'duty_type_id' => null,
             'cnic' => null,
             'join_date' => null,
         ]);

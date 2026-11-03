@@ -4,13 +4,11 @@ namespace App\Actions\Employees;
 
 use App\Actions\Offboarding\OffboardingWorkflow;
 use App\Actions\Shifts\AssignShift;
-use App\Mail\EmployeeInvitation;
+use App\Jobs\SendEmployeeCredentials;
 use App\Models\Employee;
 use App\Models\User;
 use App\Support\FileBatch;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -47,7 +45,7 @@ class CreateEmployee
 
         // Only after commit: a rolled-back hire never gets an email.
         if ($user) {
-            $this->sendInvite($employee, $user);
+            $this->sendCredentials($employee, $user);
         }
 
         return $employee;
@@ -83,7 +81,7 @@ class CreateEmployee
         $user = User::create([
             'name' => $employee->full_name,
             'email' => $employee->email,
-            // Unusable until the invitee sets their own password via the invite link.
+            // Unusable placeholder; SendEmployeeCredentials replaces it with the emailed password.
             'password' => $passwordHash ?? Hash::make(Str::random(64)),
         ]);
 
@@ -106,14 +104,16 @@ class CreateEmployee
         return $user;
     }
 
-    /** No invite for a status that may not sign in; the link would be useless. */
-    public function sendInvite(Employee $employee, User $user): void
+    /**
+     * Queues the welcome email with a random password (generated and hashed in the job). Skipped for a
+     * status that may not sign in.
+     */
+    public function sendCredentials(Employee $employee, User $user): void
     {
         if (! $employee->loginAllowed()) {
             return;
         }
 
-        $token = Password::broker('invites')->createToken($user);
-        Mail::to($user->email)->queue(new EmployeeInvitation($employee->id, $user->name, $user->email, $token));
+        SendEmployeeCredentials::dispatch($employee->id, $user->id);
     }
 }

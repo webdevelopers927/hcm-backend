@@ -3,6 +3,7 @@
 namespace App\Actions\Employees;
 
 use App\Models\Department;
+use App\Models\DutyType;
 use App\Models\EmploymentStatus;
 use App\Models\Location;
 use App\Models\Shift;
@@ -38,7 +39,7 @@ class DownloadImportTemplate
             'has_team_authority' => 'no',
             'work_mode' => 'onsite',
             'status' => EmploymentStatus::query()->orderBy('sort_order')->value('name') ?? '',
-            'duty_type' => 'full_time',
+            'duty_type' => DutyType::query()->orderBy('sort_order')->value('name') ?? '',
             'join_date' => now()->toDateString(),
             'resigned_date' => '',
             'last_working_day' => '',

@@ -32,7 +32,7 @@ final class EmployeeAttributeNames
             'reports_to_id' => 'reporting authority',
             'indirect_reports_to_id' => 'indirect reporting authority',
             'employment_status_id' => 'employment status',
-            'duty_type' => 'duty type',
+            'duty_type_id' => 'duty type',
             'join_date' => 'date of joining',
             'probation_duration_id' => 'probation duration',
             'confirmation_date' => 'date of confirmation',

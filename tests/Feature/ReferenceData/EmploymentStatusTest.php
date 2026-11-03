@@ -1,6 +1,6 @@
 <?php
 
-use App\Mail\EmployeeInvitation;
+use App\Mail\EmployeeCredentials;
 use App\Models\Designation;
 use App\Models\Employee;
 use App\Models\EmploymentStatus;
@@ -107,10 +107,10 @@ it('skips the invite email for a hire whose status may not log in', function () 
     $this->postJson('/api/v1/employees', [
         'first_name' => 'No', 'last_name' => 'Login', 'email' => 'no.login@company.pk', 'cnic' => '35202-4444444-4',
         'department_id' => $designation->department_id, 'designation_id' => $designation->id,
-        'employment_status_id' => statusId('Suspended'), 'duty_type' => 'full_time', 'join_date' => '2026-10-01',
+        'employment_status_id' => statusId('Suspended'), 'duty_type_id' => dutyTypeId('Full-time'), 'join_date' => '2026-10-01',
     ])->assertCreated();
 
-    Mail::assertNotQueued(EmployeeInvitation::class);
+    Mail::assertNotSent(EmployeeCredentials::class);
 });
 
 it('requires an existing status on the employee form', function () {

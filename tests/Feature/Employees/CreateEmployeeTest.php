@@ -1,6 +1,6 @@
 <?php
 
-use App\Mail\EmployeeInvitation;
+use App\Mail\EmployeeCredentials;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Employee;
@@ -30,7 +30,7 @@ beforeEach(function () {
         'location_id' => Location::first()->id,
         'join_date' => '2024-03-12',
         'employment_status_id' => statusId('Active'),
-        'duty_type' => 'full_time',
+        'duty_type_id' => dutyTypeId('Full-time'),
     ];
 });
 
@@ -55,8 +55,8 @@ it('creates the employee and user in one go and returns 201 profile', function (
         ->and($employee->user)->not->toBeNull()
         ->and($employee->user->email)->toBe('fatima.javed@company.pk');
 
-    Mail::assertQueued(EmployeeInvitation::class, fn (EmployeeInvitation $mail) => $mail->hasTo('fatima.javed@company.pk')
-        && $mail->employeeId === $employee->id);
+    Mail::assertSent(EmployeeCredentials::class, fn (EmployeeCredentials $mail) => $mail->hasTo('fatima.javed@company.pk')
+        && $mail->employeeCode === $employee->code && strlen($mail->password) === 10);
 });
 
 it('ignores salary and bank fields, which belong to payroll', function () {
@@ -74,13 +74,13 @@ it('rolls everything back when a step fails halfway', function () {
 
     expect(DB::table('employees')->count())->toBe(0)
         ->and(User::where('email', 'fatima.javed@company.pk')->exists())->toBeFalse();
-    Mail::assertNothingQueued();
+    Mail::assertNothingSent();
 });
 
 it('requires the mandatory fields', function () {
     $this->postJson('/api/v1/employees', [])
         ->assertStatus(422)
-        ->assertJsonValidationErrors(['first_name', 'last_name', 'email', 'cnic', 'designation_id', 'department_id', 'employment_status_id', 'duty_type', 'join_date'])
+        ->assertJsonValidationErrors(['first_name', 'last_name', 'email', 'cnic', 'designation_id', 'department_id', 'employment_status_id', 'duty_type_id', 'join_date'])
         ->assertJsonMissingValidationErrors(['gross_salary']);
 });
 

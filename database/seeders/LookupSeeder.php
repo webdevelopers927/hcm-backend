@@ -6,6 +6,7 @@ use App\Models\Campaign;
 use App\Models\DegreeProgram;
 use App\Models\Department;
 use App\Models\Division;
+use App\Models\DutyType;
 use App\Models\EmploymentStatus;
 use App\Models\Location;
 use App\Models\ProbationDuration;
@@ -28,6 +29,17 @@ class LookupSeeder extends Seeder
 
     public const PROBATION_MONTHS = [1, 2, 3, 6, 12];
 
+    /** Name => is contractual, in display order. */
+    public const DUTY_TYPES = [
+        'Full-time' => false,
+        'Part-time' => false,
+        'Contract' => true,
+        'Freelance' => true,
+        'Internship' => true,
+        'Temporary' => true,
+        'Consultant' => true,
+    ];
+
     /** Name => [can log in, is a notice period, ends employment], in display order. */
     public const EMPLOYMENT_STATUSES = [
         'Active' => [true, false, false],
@@ -40,6 +52,8 @@ class LookupSeeder extends Seeder
         'Terminated' => [false, false, true],
         'Retired' => [false, false, true],
         'Inactive' => [false, false, true],
+        // Set automatically when a contract runs out (Contract::EXPIRED_STATUS_NAME); keep the name.
+        'Contract expired' => [false, false, false],
     ];
 
     public const DEGREE_PROGRAMS = [
@@ -100,6 +114,11 @@ class LookupSeeder extends Seeder
                 ['can_login' => $canLogin, 'is_notice_period' => $notice, 'is_exit' => $exit, 'sort_order' => $order],
             );
             $order++;
+        }
+
+        $order = 0;
+        foreach (self::DUTY_TYPES as $name => $contractual) {
+            DutyType::query()->firstOrCreate(['name' => $name], ['is_contractual' => $contractual, 'sort_order' => $order++]);
         }
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\BloodGroup;
-use App\Enums\DutyType;
 use App\Enums\EmergencyContactRelation;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
@@ -70,7 +69,7 @@ use Illuminate\Support\Facades\Storage;
  * @property int|null $indirect_reports_to_id
  * @property WorkMode $work_mode
  * @property int|null $employment_status_id
- * @property DutyType|null $duty_type
+ * @property int|null $duty_type_id
  * @property Carbon|null $join_date
  * @property Carbon|null $probation_start_date
  * @property int|null $probation_duration_id
@@ -109,7 +108,7 @@ class Employee extends Model
         'email', 'personal_email', 'gender', 'birth_date', 'cnic', 'cnic_expiry',
         'country_id', 'state_id', 'city_id', 'nationality_id', 'marital_status', 'religion', 'blood_group',
         'designation_id', 'department_id', 'division_id', 'campaign_id', 'shift_id', 'location_id',
-        'reports_to_id', 'indirect_reports_to_id', 'work_mode', 'employment_status_id', 'duty_type', 'join_date',
+        'reports_to_id', 'indirect_reports_to_id', 'work_mode', 'employment_status_id', 'duty_type_id', 'join_date',
         'probation_start_date', 'probation_duration_id', 'confirmation_date', 'separation_date',
         'resigned_date', 'last_working_day', 'reason_for_resignation',
         'has_team_authority', 'remote_access', 'permanent_remote_access', 'remote_access_from', 'remote_access_until',
@@ -166,7 +165,6 @@ class Employee extends Model
             'blood_group' => BloodGroup::class,
             'emergency_contact_relation' => EmergencyContactRelation::class,
             'work_mode' => WorkMode::class,
-            'duty_type' => DutyType::class,
             'birth_date' => 'date',
             'cnic_expiry' => 'date',
             'join_date' => 'date',
@@ -282,6 +280,14 @@ class Employee extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_id');
+    }
+
+    /**
+     * @return BelongsTo<DutyType, $this>
+     */
+    public function dutyType(): BelongsTo
+    {
+        return $this->belongsTo(DutyType::class);
     }
 
     /**
@@ -442,6 +448,14 @@ class Employee extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(EmployeeDocument::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<Contract, $this>
+     */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class)->orderBy('start_date');
     }
 
     /**

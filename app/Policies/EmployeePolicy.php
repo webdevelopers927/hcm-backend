@@ -70,6 +70,12 @@ class EmployeePolicy
         return true;
     }
 
+    /** Email the employee a new random password. */
+    public function resendCredentials(User $user, Employee $employee): bool
+    {
+        return true;
+    }
+
     /** Change or schedule shifts (Shift records page). */
     public function assignShift(User $user): bool
     {

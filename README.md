@@ -10,7 +10,8 @@ API reference with real request/response examples: [docs/api-v1-employees.md](do
 the employee form, drafts, uploads and reference data: [docs/api-v1-employee-form.md](docs/api-v1-employee-form.md);
 shift records and shift history: [docs/api-v1-employee-shifts.md](docs/api-v1-employee-shifts.md);
 employment statuses: [docs/api-v1-employment-statuses.md](docs/api-v1-employment-statuses.md);
-off-boarding: [docs/api-v1-offboarding.md](docs/api-v1-offboarding.md).
+off-boarding: [docs/api-v1-offboarding.md](docs/api-v1-offboarding.md);
+duty types: [docs/api-v1-duty-types.md](docs/api-v1-duty-types.md).
 
 ## Requirements
 

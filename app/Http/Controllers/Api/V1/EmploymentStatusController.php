@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Contract;
 use App\Models\Employee;
 use App\Models\EmploymentStatus;
 use App\Models\User;
@@ -56,6 +57,9 @@ class EmploymentStatusController extends Controller
         Gate::authorize('update', $employmentStatus);
 
         $data = $this->validated($request, $employmentStatus);
+        if ($this->isSystem($employmentStatus) && isset($data['name']) && $data['name'] !== $employmentStatus->name) {
+            throw ValidationException::withMessages(['name' => 'This status is set automatically when a contract expires and can\'t be renamed.']);
+        }
 
         DB::transaction(function () use ($employmentStatus, $data) {
             $loginTurnedOff = $employmentStatus->can_login && array_key_exists('can_login', $data) && ! $data['can_login'];
@@ -77,6 +81,10 @@ class EmploymentStatusController extends Controller
     {
         Gate::authorize('delete', $employmentStatus);
 
+        if ($this->isSystem($employmentStatus)) {
+            return response()->json(['message' => 'This status is used automatically for expired contracts and can\'t be deleted.'], 409);
+        }
+
         $usage = Employee::withTrashed()->where('employment_status_id', $employmentStatus->id)->count();
         if ($usage > 0) {
             return response()->json([
@@ -90,7 +98,7 @@ class EmploymentStatusController extends Controller
     }
 
     /**
-     * @return array{name: string, can_login?: bool, is_notice_period?: bool, is_exit?: bool, sort_order?: int}
+     * @return array{name?: string, can_login?: bool, is_notice_period?: bool, is_exit?: bool, sort_order?: int}
      */
     private function validated(Request $request, ?EmploymentStatus $status): array
     {
@@ -100,7 +108,7 @@ class EmploymentStatusController extends Controller
 
         $present = $status ? 'sometimes' : 'required';
 
-        /** @var array{name: string, can_login?: bool, is_notice_period?: bool, is_exit?: bool, sort_order?: int} $data */
+        /** @var array{name?: string, can_login?: bool, is_notice_period?: bool, is_exit?: bool, sort_order?: int} $data */
         $data = $request->validate([
             'name' => [$present, 'string', 'max:100', Rule::unique('employment_statuses', 'name')->ignore($status?->id)],
             'can_login' => [$present, 'boolean'],
@@ -119,16 +127,28 @@ class EmploymentStatusController extends Controller
         return $data;
     }
 
+    /** Statuses the app relies on by name. */
+    private function isSystem(EmploymentStatus $status): bool
+    {
+        return $status->name === Contract::EXPIRED_STATUS_NAME;
+    }
+
     private function usage(EmploymentStatus $status): int
     {
         return Employee::query()->finalized()->where('employment_status_id', $status->id)->count();
     }
 
     /**
-     * @return array{id: int, name: string, can_login: bool, is_notice_period: bool, sort_order: int, employees_count: int}
+     * @return array{id: int, name: string, can_login: bool, is_notice_period: bool, is_exit: bool, sort_order: int, employees_count: int, is_system: bool}
      */
     private function row(EmploymentStatus $status, int $employees): array
     {
-        return [...$status->toRef(), 'sort_order' => $status->sort_order, 'employees_count' => $employees];
+        return [
+            ...$status->toRef(),
+            'sort_order' => $status->sort_order,
+            'employees_count' => $employees,
+            // Can't be renamed or deleted (the app sets it itself).
+            'is_system' => $this->isSystem($status),
+        ];
     }
 }

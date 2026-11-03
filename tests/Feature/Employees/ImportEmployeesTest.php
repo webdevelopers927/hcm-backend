@@ -1,7 +1,7 @@
 <?php
 
 use App\Actions\Employees\ImportEmployees;
-use App\Mail\EmployeeInvitation;
+use App\Mail\EmployeeCredentials;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -70,7 +70,7 @@ it('validates the whole file in dry run without writing anything', function () {
         ->assertJson(['dry_run' => true, 'total_rows' => 2]);
 
     expect(Employee::count())->toBe(0)->and(User::count())->toBe(1);
-    Mail::assertNothingQueued();
+    Mail::assertNothingSent();
 });
 
 it('imports every row like a single create: employee, user and invite', function () {
@@ -84,7 +84,7 @@ it('imports every row like a single create: employee, user and invite', function
         ->and($ali->designation->name)->toBe('Software Engineer')
         ->and($ali->work_mode->value)->toBe('hybrid')
         ->and($ali->employmentStatus()->value('name'))->toBe('On leave')
-        ->and($ali->duty_type->value)->toBe('full_time')
+        ->and($ali->dutyType()->value('name'))->toBe('Full-time')
         ->and($ali->is_draft)->toBeFalse()
         ->and($ali->shift->name)->toBe('Morning')
         ->and($ali->code)->toStartWith('EMP-')
@@ -92,7 +92,7 @@ it('imports every row like a single create: employee, user and invite', function
         ->and($ali->user->email)->toBe('ali.raza@company.pk')
         ->and(Employee::where('email', 'sara.raza@company.pk')->exists())->toBeTrue();
 
-    Mail::assertQueued(EmployeeInvitation::class, 2);
+    Mail::assertSent(EmployeeCredentials::class, 2);
     expect(Activity::query()->where('event', 'imported')->sole()->properties->get('count'))->toBe(2);
 });
 
@@ -118,7 +118,7 @@ it('rejects the whole file with row-numbered errors and writes nothing', functio
         ->and($response->json('errors')['rows.5.designation'][0])->toContain('does not exist in department');
 
     expect(Employee::count())->toBe(1);
-    Mail::assertNothingQueued();
+    Mail::assertNothingSent();
 });
 
 it('resolves reports_to from existing employee codes/emails and from other rows in the file', function () {
@@ -203,7 +203,7 @@ it('rolls back every row if the database fails midway', function () {
 
     expect(DB::table('employees')->count())->toBe(0)
         ->and(User::count())->toBe(1);
-    Mail::assertNothingQueued();
+    Mail::assertNothingSent();
 });
 
 it('validates the upload itself', function (Closure $file, string $message) {
@@ -232,4 +232,16 @@ it('requires authentication', function () {
 
     $this->postJson('/api/v1/employees/import')->assertUnauthorized();
     $this->getJson('/api/v1/employees/import/template')->assertUnauthorized();
+});
+
+it('matches duty types by name, ignoring case, spaces, hyphens and underscores', function (string $typed) {
+    postImport(importCsv([validRow('Dt', 'dt@company.pk', ['duty_type' => $typed])]))->assertCreated();
+
+    expect(Employee::where('email', 'dt@company.pk')->value('duty_type_id'))->toBe(dutyTypeId('Full-time'));
+})->with(['Full-time', 'full time', 'FULL_TIME', 'full-Time']);
+
+it('rejects an unknown duty type', function () {
+    postImport(importCsv([validRow('Dt', 'dt@company.pk', ['duty_type' => 'Volunteer'])]))
+        ->assertStatus(422)
+        ->assertJsonPath('errors', fn ($e) => $e['rows.2.duty_type'][0] === 'Duty type "Volunteer" does not exist.');
 });

@@ -213,9 +213,9 @@ it('edits a case and the exit details', function () {
     $id = startOffboarding($employee)->json('data.id');
 
     $this->patchJson("/api/v1/offboardings/{$id}", [
-        'stage' => 'exit_interview', 'final_employment_status_id' => statusId('Inactive'), 'last_working_day' => '2026-12-15',
+        'stage' => 'clearance', 'final_employment_status_id' => statusId('Inactive'), 'last_working_day' => '2026-12-15',
     ])->assertOk()
-        ->assertJsonPath('data.stage', 'exit_interview')
+        ->assertJsonPath('data.stage', 'clearance')
         ->assertJsonPath('data.final_employment_status.name', 'Inactive')
         ->assertJsonPath('data.last_working_day', '2026-12-15');
 
@@ -306,7 +306,7 @@ it('treats setting an exit status in the employee form as an immediate exit', fu
 });
 
 it('picks the exit type from the exit status chosen in the form', function () {
-    $employee = Employee::factory()->inStatus('Active')->create();
+    $employee = Employee::factory()->inStatus('Active')->create(['join_date' => '2024-01-01']);
 
     $this->patchJson("/api/v1/employees/{$employee->id}", [
         'employment_status_id' => statusId('Retired'),

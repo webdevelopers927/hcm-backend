@@ -33,7 +33,7 @@ returns `404` for them.
    missing, in the same `{ field: [message] }` shape as a `422`.
 
 Core set: `first_name`, `last_name`, `email` (business email = login email), `cnic`, `department_id`,
-`designation_id`, `employment_status_id`, `duty_type`, `join_date`.
+`designation_id`, `employment_status_id`, `duty_type_id`, `join_date`.
 Conditional:
 - `remote_access = true` → `remote_access_from` required; `remote_access_until` required unless
   `permanent_remote_access = true`.
@@ -52,7 +52,7 @@ Submitting an incomplete draft:
         "email": ["The business email field is required."],
         "department_id": ["The department field is required."],
         "employment_status_id": ["The employment status field is required."],
-        "duty_type": ["The duty type field is required."],
+        "duty_type_id": ["The duty type field is required."],
         "join_date": ["The date of joining field is required."],
         "work_experiences.0.designation": ["The designation field is required."],
         "work_experiences.0.experience_letter": ["The experience letter field is required."]
@@ -92,7 +92,7 @@ All optional on a draft. `PATCH` changes only the keys you send; `null` clears a
 | `division_id`, `campaign_id`, `shift_id`, `location_id` | lookup ids |
 | `work_mode` | `onsite` (default) `hybrid` `remote` |
 | `employment_status_id` | id from `form-options.employment_statuses` (managed in Setup; see [api-v1-employment-statuses.md](api-v1-employment-statuses.md)) |
-| `duty_type` | `full_time` `part_time` `contract` `freelance` `internship` `temporary` `consultant` |
+| `duty_type_id` | id from `form-options.duty_types` (managed in Setup; see [api-v1-duty-types.md](api-v1-duty-types.md)) |
 | `join_date` | date of joining |
 | `probation_start_date` | date, not before `join_date` |
 | `probation_duration_id` | id from `form-options.probation_durations`; the response adds `probation_end_date` |
@@ -176,7 +176,7 @@ Real response (draft just created, shortened):
     "state_id": 3176, "state": { "id": 3176, "name": "Punjab" },
     "city_id": 85485, "city": { "id": 85485, "name": "Jaranwala" },
     "nationality_id": null, "nationality": null,
-    "email": null, "work_mode": "onsite", "employment_status_id": null, "employment_status": null, "duty_type": null, "join_date": null,
+    "email": null, "work_mode": "onsite", "employment_status_id": null, "employment_status": null, "duty_type_id": null, "duty_type": null, "join_date": null,
     "probation_duration_id": null, "probation_end_date": null,
     "reports_to_id": 1,
     "reports_to": { "id": 1, "name": "Ahmed Nawaz", "designation": { "id": 1, "name": "Engineering Manager" }, "avatar_url": null },
@@ -228,7 +228,7 @@ Avatars are public URLs (`avatar_url`).
 
 | Endpoint | Returns |
 |---|---|
-| `GET /employees/form-options` | every fixed dropdown: `salutations`, `genders`, `marital_statuses`, `religions`, `blood_groups`, `duty_types`, `work_modes`, `emergency_contact_relations` (all `{value, label}`), `employment_statuses` (`{id, name, can_login, is_notice_period}`), `probation_durations` (`{id, name, months}`), `degree_programs`, `departments`, `designations` (`+department_id`), `divisions`, `campaigns`, `shifts` (`{id, name, start, end}`), `locations` |
+| `GET /employees/form-options` | every fixed dropdown: `salutations`, `genders`, `marital_statuses`, `religions`, `blood_groups`, `work_modes`, `emergency_contact_relations` (all `{value, label}`), `employment_statuses` (`{id, name, can_login, is_notice_period, is_exit}`), `duty_types` (`{id, name, is_contractual}`), `probation_durations` (`{id, name, months}`), `degree_programs`, `departments`, `designations` (`+department_id`), `divisions`, `campaigns`, `shifts` (`{id, name, start, end}`), `locations` |
 | `GET /countries?search=` | all ~250: `{id, name, iso2, iso3, phone_code, emoji}` |
 | `GET /countries/{id}/states?search=` | `{id, country_id, name, code}` |
 | `GET /states/{id}/cities?search=&page=&per_page=` | paginated (default 50, max 100): `{ data: [{id, state_id, name}], meta }` |

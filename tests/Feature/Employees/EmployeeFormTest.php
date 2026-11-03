@@ -25,7 +25,7 @@ beforeEach(function () {
         'department_id' => $designation->department_id,
         'designation_id' => $designation->id,
         'employment_status_id' => statusId('Active'),
-        'duty_type' => 'full_time',
+        'duty_type_id' => dutyTypeId('Full-time'),
         'join_date' => '2026-01-05',
     ];
 });
@@ -86,7 +86,7 @@ it('saves every personal, positional, contact and other field and reads them bac
         'department_id' => $this->core['department_id'],
         'designation_id' => $this->core['designation_id'],
         'employment_status_id' => statusId('Probation'),
-        'duty_type' => 'contract',
+        'duty_type_id' => dutyTypeId('Contract'),
         'join_date' => '2026-01-05',
         'probation_start_date' => '2026-01-05',
         'probation_duration_id' => $probation->id,
@@ -123,7 +123,7 @@ it('saves every personal, positional, contact and other field and reads them bac
         'city' => ['id' => 85485, 'name' => 'Lahore'],
         'nationality' => ['id' => 167, 'name' => 'Pakistani'],
         'blood_group' => 'B+',
-        'duty_type' => 'contract',
+        'duty_type' => ['id' => dutyTypeId('Contract'), 'name' => 'Contract', 'is_contractual' => true],
         'probation_end_date' => '2026-04-04',
         'reports_to_id' => $manager->id,
         'indirect_reports_to_id' => $dotted->id,
@@ -381,7 +381,7 @@ it('offers every fixed dropdown in one call', function () {
     $this->getJson('/api/v1/employees/form-options')
         ->assertOk()
         ->assertJsonPath('data.blood_groups.0', ['value' => 'A+', 'label' => 'A+'])
-        ->assertJsonPath('data.duty_types.0', ['value' => 'full_time', 'label' => 'Full-time'])
+        ->assertJsonPath('data.duty_types.0', ['id' => dutyTypeId('Full-time'), 'name' => 'Full-time', 'is_contractual' => false])
         ->assertJsonPath('data.probation_durations.0.months', 1)
         ->assertJsonStructure(['data' => [
             'salutations', 'genders', 'marital_statuses', 'religions', 'employment_statuses', 'work_modes',

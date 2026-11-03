@@ -22,7 +22,7 @@ status through the form **opens an offboarding case automatically** (exit type `
 ## Cases
 An employee has at most one open case. A case has:
 - `exit_type`: `resignation` | `termination` | `contract_end` | `retirement`
-- `stage`: `resigned` → `notice_period` → `clearance` → `exit_interview` → `completed` (any order except
+- `stage`: `resigned` → `notice_period` → `clearance` → `completed` (any order except
   `completed`, which only the complete action sets)
 - a **checklist** (8 default items: exit letter, handover, laptop, access, ID card, final settlement, exit
   interview, experience letter; each with an `owner` such as HR, IT, Manager, Finance or Admin)
@@ -59,7 +59,7 @@ plus those completed in the last 90 days, open first, then by soonest last worki
   "meta": { "current_page": 1, "last_page": 1, "per_page": 50, "total": 1 },
   "summary": {
     "in_progress": 1, "leaving_in_30_days": 1, "pending_clearance": 0, "completed": 0,
-    "by_stage": { "resigned": 0, "notice_period": 1, "clearance": 0, "exit_interview": 0, "completed": 0 },
+    "by_stage": { "resigned": 0, "notice_period": 1, "clearance": 0, "completed": 0 },
     "stages": [{ "value": "resigned", "label": "Resigned" }, …],
     "exit_types": [{ "value": "resignation", "label": "Resignation" }, …]
   }

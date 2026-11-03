@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Division;
+use App\Models\DutyType;
 use App\Models\Employee;
 use App\Models\EmploymentStatus;
 use App\Models\Location;
@@ -42,7 +43,7 @@ class ImportEmployees
     private const ID_COLUMNS = [
         'department_id' => 'department', 'designation_id' => 'designation', 'division_id' => 'division',
         'campaign_id' => 'campaign', 'shift_id' => 'shift', 'location_id' => 'location', 'reports_to_id' => 'reports_to',
-        'employment_status_id' => 'status',
+        'employment_status_id' => 'status', 'duty_type_id' => 'duty_type',
     ];
 
     /** @var array<string, array<string, int>> lookup table => lowercase name => id */
@@ -95,7 +96,7 @@ class ImportEmployees
         });
 
         foreach ($created as [$employee, $user]) {
-            $this->createEmployee->sendInvite($employee, $user);
+            $this->createEmployee->sendCredentials($employee, $user);
         }
 
         return [
@@ -265,7 +266,6 @@ class ImportEmployees
             'pseudo_name' => $value('pseudo_name'),
             'machine_uid' => $value('machine_uid'),
             'work_mode' => $enum('work_mode'),
-            'duty_type' => $enum('duty_type'),
             'has_team_authority' => self::yesNo($value('has_team_authority')),
             'join_date' => self::excelDate($value('join_date')),
             'resigned_date' => self::excelDate($value('resigned_date')),
@@ -292,6 +292,11 @@ class ImportEmployees
         $status = $value('status');
         $data['employment_status_id'] = $this->lookup('employment_statuses', $status === null ? null : str_replace('_', ' ', $status), $errors, 'status',
             $status === null ? null : "Employment status \"{$status}\" does not exist.");
+
+        // Duty type by name; "Full time", "full_time" and "Full-time" all match.
+        $dutyType = $value('duty_type');
+        $data['duty_type_id'] = $this->lookup('duty_types', $dutyType === null ? null : self::loose($dutyType), $errors, 'duty_type',
+            $dutyType === null ? null : "Duty type \"{$dutyType}\" does not exist.");
 
         // reports_to: an existing employee's code or email, or the email of another row in this file.
         $managerEmail = null;
@@ -371,10 +376,19 @@ class ImportEmployees
             $table === 'campaigns' => Campaign::query()->get(['id', 'name']),
             $table === 'shifts' => Shift::query()->get(['id', 'name']),
             $table === 'employment_statuses' => EmploymentStatus::query()->get(['id', 'name']),
+            $table === 'duty_types' => DutyType::query()->get(['id', 'name']),
             default => Location::query()->get(['id', 'name']),
         };
 
-        return $rows->mapWithKeys(fn ($r) => [strtolower($r->name) => $r->id])->all();
+        $key = $table === 'duty_types' ? fn (string $n) => self::loose($n) : fn (string $n) => strtolower($n);
+
+        return $rows->mapWithKeys(fn ($r) => [$key($r->name) => $r->id])->all();
+    }
+
+    /** Lower-case with spaces, underscores and hyphens treated alike ("Full-time" = "full time"). */
+    private static function loose(string $name): string
+    {
+        return trim((string) preg_replace('/[\s_\-]+/', ' ', strtolower($name)));
     }
 
     /**

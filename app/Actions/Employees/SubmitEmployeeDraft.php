@@ -15,7 +15,7 @@ class SubmitEmployeeDraft
     ) {}
 
     /**
-     * Turns a complete draft into a real employee: login account, code, invite email.
+     * Turns a complete draft into a real employee: login account, code, welcome email with a password.
      * An incomplete draft gets a 422 listing every missing field and stays a draft.
      */
     public function handle(User $actor, Employee $draft, ?string $ip): Employee
@@ -40,7 +40,7 @@ class SubmitEmployeeDraft
             return $user;
         });
 
-        $this->createEmployee->sendInvite($draft, $user);
+        $this->createEmployee->sendCredentials($draft, $user);
 
         return $draft;
     }

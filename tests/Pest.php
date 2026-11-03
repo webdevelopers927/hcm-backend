@@ -83,6 +83,12 @@ function statusId(string $name): int
     return (int) EmployeeFactory::statusId($name);
 }
 
+/** Id of a seeded duty type, by name ("Full-time", "Contract"…). */
+function dutyTypeId(string $name): int
+{
+    return (int) EmployeeFactory::dutyTypeId($name);
+}
+
 /** Shape of an EmployeeListItem; used to assert the list contract. */
 function employeeListItemKeys(): array
 {

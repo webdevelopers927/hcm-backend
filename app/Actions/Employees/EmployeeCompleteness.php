@@ -47,7 +47,7 @@ class EmployeeCompleteness
             'department_id' => ['required'],
             'designation_id' => ['required'],
             'employment_status_id' => ['required'],
-            'duty_type' => ['required'],
+            'duty_type_id' => ['required'],
             'join_date' => ['required'],
 
             'resigned_date' => [Rule::requiredIf($needsExitDetails)],
@@ -132,7 +132,7 @@ class EmployeeCompleteness
     public static function data(Employee $employee): array
     {
         $data = [];
-        foreach (['first_name', 'last_name', 'email', 'cnic', 'department_id', 'designation_id', 'employment_status_id', 'duty_type',
+        foreach (['first_name', 'last_name', 'email', 'cnic', 'department_id', 'designation_id', 'employment_status_id', 'duty_type_id',
             'join_date', 'remote_access', 'permanent_remote_access', 'remote_access_from', 'remote_access_until',
             'has_work_experience', 'resigned_date', 'last_working_day', 'reason_for_resignation'] as $key) {
             $value = $employee->getAttribute($key);

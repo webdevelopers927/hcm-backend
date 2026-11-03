@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             LookupSeeder::class,
             AdminUserSeeder::class,
             EmployeeSeeder::class,
+            ContractSeeder::class,
         ]);
     }
 }

@@ -1,10 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ContractController;
 use App\Http\Controllers\Api\V1\DegreeProgramController;
 use App\Http\Controllers\Api\V1\DivisionController;
+use App\Http\Controllers\Api\V1\DutyTypeController;
 use App\Http\Controllers\Api\V1\EmployeeBulkDeleteController;
 use App\Http\Controllers\Api\V1\EmployeeController;
+use App\Http\Controllers\Api\V1\EmployeeCredentialsController;
 use App\Http\Controllers\Api\V1\EmployeeDetailController;
 use App\Http\Controllers\Api\V1\EmployeeDeviceController;
 use App\Http\Controllers\Api\V1\EmployeeDraftController;
@@ -38,8 +41,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('divisions', DivisionController::class);
     Route::apiResource('degree-programs', DegreeProgramController::class);
     Route::apiResource('employment-statuses', EmploymentStatusController::class);
+    Route::apiResource('duty-types', DutyTypeController::class);
 
     Route::post('uploads', [UploadController::class, 'store'])->middleware('throttle:uploads');
+
+    // Contracts
+    Route::get('contracts/eligible-employees', [ContractController::class, 'eligibleEmployees']);
+    Route::apiResource('contracts', ContractController::class);
+    Route::post('contracts/{contract}/renew', [ContractController::class, 'renew']);
 
     // Off-boarding
     Route::apiResource('offboardings', OffboardingController::class);
@@ -72,6 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('employees/{employee}/submit', [EmployeeDraftController::class, 'submit']);
     Route::get('employees/{employee}/sensitive', EmployeeSensitiveController::class);
     Route::post('employees/{employee}/two-factor/reset', EmployeeTwoFactorController::class);
+    Route::post('employees/{employee}/credentials/resend', EmployeeCredentialsController::class)->middleware('throttle:6,1');
     Route::get('employees/{employee}/device', [EmployeeDeviceController::class, 'show']);
     Route::post('employees/{employee}/device/unbind', [EmployeeDeviceController::class, 'unbind']);
 

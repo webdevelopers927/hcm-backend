@@ -139,7 +139,7 @@ it('records shift history from the employee form: the starting shift and later c
     $id = $this->postJson('/api/v1/employees', [
         'first_name' => 'New', 'last_name' => 'Hire', 'email' => 'new.hire@company.pk', 'cnic' => '35202-3333333-3',
         'department_id' => $designation->department_id, 'designation_id' => $designation->id,
-        'employment_status_id' => statusId('Active'), 'duty_type' => 'full_time', 'join_date' => '2026-10-01', 'shift_id' => $this->morning->id,
+        'employment_status_id' => statusId('Active'), 'duty_type_id' => dutyTypeId('Full-time'), 'join_date' => '2026-10-01', 'shift_id' => $this->morning->id,
     ])->assertCreated()->json('data.id');
 
     $this->patchJson("/api/v1/employees/{$id}", ['shift_id' => $this->night->id])->assertOk();

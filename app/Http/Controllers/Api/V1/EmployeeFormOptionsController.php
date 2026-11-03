@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\BloodGroup;
-use App\Enums\DutyType;
 use App\Enums\EmergencyContactRelation;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
@@ -16,6 +15,7 @@ use App\Models\DegreeProgram;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\Division;
+use App\Models\DutyType;
 use App\Models\Employee;
 use App\Models\EmploymentStatus;
 use App\Models\Location;

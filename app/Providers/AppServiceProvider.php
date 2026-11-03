@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict(! $this->app->isProduction());
 
         Route::patterns(array_fill_keys(
-            ['employee', 'document', 'workExperience', 'country', 'state', 'division', 'degree_program', 'assignment', 'employment_status', 'offboarding', 'item'],
+            ['employee', 'document', 'workExperience', 'country', 'state', 'division', 'degree_program', 'assignment', 'employment_status', 'offboarding', 'item', 'duty_type', 'contract'],
             '[0-9]+',
         ));
 

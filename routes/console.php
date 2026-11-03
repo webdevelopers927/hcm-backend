@@ -18,3 +18,6 @@ Schedule::command('shifts:apply-scheduled')->dailyAt('00:05');
 
 // Offboarded employees leave the day after their last working day.
 Schedule::command('offboarding:process-exits')->dailyAt('00:10');
+
+// Contracts that ended yesterday lock the employee out; renewed ones that start today restore them.
+Schedule::command('contracts:sync')->dailyAt('00:15');

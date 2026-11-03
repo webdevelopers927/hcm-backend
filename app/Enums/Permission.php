@@ -22,8 +22,11 @@ enum Permission: string
     case EmployeesUnbindDevice = 'employees.unbind-device';
     case EmployeesAssignShift = 'employees.assign-shift';
     case EmployeesOffboard = 'employees.offboard';
+    case EmployeesResendCredentials = 'employees.resend-credentials';
     case DivisionsManage = 'divisions.manage';
     case EmploymentStatusesManage = 'employment-statuses.manage';
+    case DutyTypesManage = 'duty-types.manage';
+    case ContractsManage = 'contracts.manage';
     case DegreeProgramsManage = 'degree-programs.manage';
 
     /**

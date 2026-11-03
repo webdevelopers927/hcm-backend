@@ -1,6 +1,6 @@
 <?php
 
-use App\Mail\EmployeeInvitation;
+use App\Mail\EmployeeCredentials;
 use App\Models\Designation;
 use App\Models\Employee;
 use App\Models\User;
@@ -23,7 +23,7 @@ beforeEach(function () {
         'department_id' => $designation->department_id,
         'designation_id' => $designation->id,
         'employment_status_id' => statusId('Probation'),
-        'duty_type' => 'internship',
+        'duty_type_id' => dutyTypeId('Internship'),
         'join_date' => '2026-11-10',
     ];
 });
@@ -40,8 +40,8 @@ it('saves an empty draft: no code, no login, no invite', function () {
     $response->assertJsonPath('data.is_draft', true)
         ->assertJsonPath('data.code', null)
         ->assertJsonPath('data.created_by.id', $this->actor->id)
-        ->assertJsonStructure(['data' => ['missing_fields' => ['first_name', 'cnic', 'duty_type', 'join_date']]]);
-    Mail::assertNothingQueued();
+        ->assertJsonStructure(['data' => ['missing_fields' => ['first_name', 'cnic', 'duty_type_id', 'join_date']]]);
+    Mail::assertNothingSent();
 });
 
 it('keeps drafts out of the employee list, counts, export, profile and manager pickers', function () {
@@ -92,11 +92,11 @@ it('refuses to submit an incomplete draft and lists what is missing', function (
 
     $this->postJson("/api/v1/employees/{$draft->id}/submit")
         ->assertStatus(422)
-        ->assertJsonValidationErrors(['cnic', 'employment_status_id', 'duty_type', 'join_date'])
-        ->assertJsonPath('errors.duty_type.0', 'The duty type field is required.');
+        ->assertJsonValidationErrors(['cnic', 'employment_status_id', 'duty_type_id', 'join_date'])
+        ->assertJsonPath('errors.duty_type_id.0', 'The duty type field is required.');
 
     expect($draft->fresh()->is_draft)->toBeTrue()->and(User::count())->toBe(1);
-    Mail::assertNothingQueued();
+    Mail::assertNothingSent();
 });
 
 it('submits a complete draft: code, login account, invite and audit entry', function () {
@@ -111,7 +111,7 @@ it('submits a complete draft: code, login account, invite and audit entry', func
     $employee = Employee::findOrFail($id);
     expect($employee->is_draft)->toBeFalse()
         ->and($employee->user->email)->toBe('hamza.iqbal@company.pk');
-    Mail::assertQueued(EmployeeInvitation::class, fn (EmployeeInvitation $m) => $m->hasTo('hamza.iqbal@company.pk'));
+    Mail::assertSent(EmployeeCredentials::class, fn (EmployeeCredentials $m) => $m->hasTo('hamza.iqbal@company.pk'));
     expect(Activity::where('event', 'draft_submitted')->sole()->subject_id)->toBe($id);
 
     $this->getJson('/api/v1/employees')->assertJsonPath('meta.total', 1);
